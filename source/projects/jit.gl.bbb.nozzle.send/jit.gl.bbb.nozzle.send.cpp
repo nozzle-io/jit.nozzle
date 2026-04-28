@@ -124,6 +124,10 @@ private:
 			cerr << "jit.gl.bbb.nozzle.send: texture '" << tex_name_str << "' not found" << endl;
 			return;
 		}
+		if(jit_object_classname(tex_obj) != gensym("jit_gl_texture")) {
+			cerr << "jit.gl.bbb.nozzle.send: object '" << tex_name_str << "' is not a jit.gl.texture" << endl;
+			return;
+		}
 
 		long gl_id = (long)jit_object_method(tex_obj, gensym("gl_name"));
 		if(gl_id <= 0) {

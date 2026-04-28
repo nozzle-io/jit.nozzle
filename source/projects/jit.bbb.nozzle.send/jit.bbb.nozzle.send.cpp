@@ -96,6 +96,10 @@ private:
 			cerr << "jit.bbb.nozzle.send: matrix '" << matrix_name << "' not found" << endl;
 			return;
 		}
+		if(jit_object_classname(matrix_obj) != _jit_sym_jit_matrix) {
+			cerr << "jit.bbb.nozzle.send: object '" << matrix_name << "' is not a jit.matrix" << endl;
+			return;
+		}
 
 		// ensure sender exists
 		{
