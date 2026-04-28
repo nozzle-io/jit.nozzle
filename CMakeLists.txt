@@ -12,19 +12,6 @@ endif()
  # --- Build nozzle from source (skip tests/examples) ---
 set(NOZZLE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(NOZZLE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-
-# --- Match Max SDK CRT (static /MT on Windows) ---
-if(WIN32 AND CMAKE_GENERATOR MATCHES "Visual Studio")
-	set(CMAKE_C_FLAGS_DEBUG            "/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1" CACHE STRING "" FORCE)
-	set(CMAKE_C_FLAGS_MINSIZEREL       "/MT /O1 /Ob1 /D NDEBUG" CACHE STRING "" FORCE)
-	set(CMAKE_C_FLAGS_RELEASE          "/MT /O2 /Ob2 /D NDEBUG" CACHE STRING "" FORCE)
-	set(CMAKE_C_FLAGS_RELWITHDEBINFO   "/MT /Zi /O2 /Ob1 /D NDEBUG" CACHE STRING "" FORCE)
-	set(CMAKE_CXX_FLAGS_DEBUG          "/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1" CACHE STRING "" FORCE)
-	set(CMAKE_CXX_FLAGS_MINSIZEREL     "/MT /O1 /Ob1 /D NDEBUG" CACHE STRING "" FORCE)
-	set(CMAKE_CXX_FLAGS_RELEASE        "/MT /O2 /Ob2 /D NDEBUG" CACHE STRING "" FORCE)
-	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MT /Zi /O2 /Ob1 /D NDEBUG" CACHE STRING "" FORCE)
-endif()
-
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/deps/nozzle)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bbb_external.cmake)
