@@ -40,3 +40,37 @@ jobs:
             echo "$archs"
             echo "$archs" | grep -q "x86_64 arm64" || { echo "Not universal: $ext"; exit 1; }
           done
+
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH for private submodule
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.NOZZLE_DEPLOY_KEY }}" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Fetch submodules
+        run: git submodule update --init --recursive
+
+      - name: Configure
+        run: cmake -B build
+
+      - name: Build
+        run: cmake --build build --config Debug
+
+      - name: Verify externals
+        shell: bash
+        run: |
+          for ext in jit.bbb.nozzle.send jit.bbb.nozzle.receive jit.gl.bbb.nozzle.send jit.gl.bbb.nozzle.receive; do
+            binary="externals/${ext}.mxe64"
+            if [ ! -f "$binary" ]; then
+              echo "Missing: $binary"
+              exit 1
+            fi
+            echo "OK: $binary"
+          done
