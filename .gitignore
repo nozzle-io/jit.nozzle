@@ -1,5 +1,4 @@
 build/
 externals/
-help/*.maxhelp
 .DS_Store
 *.mxo
