@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          ssh-key: ${{ secrets.NOZZLE_DEPLOY_KEY }}
+
+      - name: Configure
+        run: cmake -B build
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Verify externals
+        run: |
+          for ext in jit.bbb.nozzle.send jit.bbb.nozzle.receive jit.gl.bbb.nozzle.send jit.gl.bbb.nozzle.receive; do
+            binary="externals/${ext}.mxo/Contents/MacOS/${ext}"
+            if [ ! -f "$binary" ]; then
+              echo "Missing: $binary"
+              exit 1
+            fi
+            archs=$(lipo -info "$binary" 2>&1)
+            echo "$archs"
+            echo "$archs" | grep -q "x86_64 arm64" || { echo "Not universal: $ext"; exit 1; }
+          done
