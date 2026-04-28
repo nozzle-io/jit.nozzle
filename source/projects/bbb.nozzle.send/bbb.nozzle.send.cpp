@@ -5,6 +5,7 @@ extern "C" {
 }
 
 #include <cstring>
+#include <mutex>
 #include <string>
 
 using namespace c74::min;
@@ -88,6 +89,7 @@ public:
 
 	bbb_nozzle_send() {}
 	~bbb_nozzle_send() {
+		std::lock_guard<std::mutex> lock(mutex_);
 		if(sender_) {
 			nozzle_sender_destroy(sender_);
 			sender_ = nullptr;
@@ -96,8 +98,11 @@ public:
 
 private:
 	NozzleSender *sender_{nullptr};
+	std::mutex mutex_;
 
 	void setup_sender(const std::string& name, int w, int h) {
+		std::lock_guard<std::mutex> lock(mutex_);
+
 		if(sender_) {
 			nozzle_sender_destroy(sender_);
 			sender_ = nullptr;
@@ -112,14 +117,20 @@ private:
 
 		NozzleErrorCode err = nozzle_sender_create(&desc, &sender_);
 		if(err != NOZZLE_OK) {
-			cerr << "bbb.nozzle.send: failed to create sender (error " << err << ")" << endl;
+			cerr << "bbb.nozzle.send: failed to create sender '" << name
+			     << "' (error " << err << ")" << endl;
 			sender_ = nullptr;
 		}
 	}
 
 	void publish_frame() {
+		std::lock_guard<std::mutex> lock(mutex_);
+
 		if(!sender_) {
+			// unlock to call setup_sender which locks internally
+			mutex_.unlock();
 			setup_sender(attr_to_string(name_attr), static_cast<int>(width), static_cast<int>(height));
+			mutex_.lock();
 		}
 		if(!sender_) return;
 
@@ -139,6 +150,7 @@ private:
 		err = nozzle_sender_commit_frame(sender_, frame);
 		if(err != NOZZLE_OK) {
 			cerr << "bbb.nozzle.send: commit failed (error " << err << ")" << endl;
+			nozzle_frame_release(frame);
 		}
 	}
 };

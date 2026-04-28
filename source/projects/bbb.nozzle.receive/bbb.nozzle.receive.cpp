@@ -5,6 +5,7 @@ extern "C" {
 }
 
 #include <cstring>
+#include <mutex>
 #include <string>
 
 using namespace c74::min;
@@ -79,6 +80,7 @@ public:
 
 	bbb_nozzle_receive() {}
 	~bbb_nozzle_receive() {
+		std::lock_guard<std::mutex> lock(mutex_);
 		if(receiver_) {
 			nozzle_receiver_destroy(receiver_);
 			receiver_ = nullptr;
@@ -87,8 +89,11 @@ public:
 
 private:
 	NozzleReceiver *receiver_{nullptr};
+	std::mutex mutex_;
 
 	void setup_receiver(const std::string& name) {
+		std::lock_guard<std::mutex> lock(mutex_);
+
 		if(receiver_) {
 			nozzle_receiver_destroy(receiver_);
 			receiver_ = nullptr;
@@ -103,7 +108,8 @@ private:
 
 		NozzleErrorCode err = nozzle_receiver_create(&desc, &receiver_);
 		if(err != NOZZLE_OK) {
-			cerr << "bbb.nozzle.receive: failed to connect to '" << name << "' (error " << err << ")" << endl;
+			cerr << "bbb.nozzle.receive: failed to connect to '" << name
+			     << "' (error " << err << ")" << endl;
 			receiver_ = nullptr;
 		} else {
 			cout << "bbb.nozzle.receive: connected to '" << name << "'" << endl;
@@ -111,8 +117,13 @@ private:
 	}
 
 	void poll_frame() {
+		std::lock_guard<std::mutex> lock(mutex_);
+
 		if(!receiver_) {
+			// unlock to call setup_receiver which locks internally
+			mutex_.unlock();
 			setup_receiver(attr_to_string(name_attr));
+			mutex_.lock();
 		}
 		if(!receiver_) return;
 
