@@ -1,3 +1,6 @@
-[submodule "/Users/2bit/prog/cpp/bbb.nozzle/deps/min-api"]
-	path = /Users/2bit/prog/cpp/bbb.nozzle/deps/min-api
+[submodule "deps/min-api"]
+	path = deps/min-api
 	url = https://github.com/Cycling74/min-api.git
+[submodule "deps/nozzle"]
+	path = deps/nozzle
+	url = git@github.com:2bbb/nozzle.git
