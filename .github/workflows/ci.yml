@@ -11,9 +11,16 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          ssh-key: ${{ secrets.NOZZLE_DEPLOY_KEY }}
+
+      - name: Setup SSH for private submodule
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.NOZZLE_DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Fetch submodules
+        run: git submodule update --init --recursive
 
       - name: Configure
         run: cmake -B build
