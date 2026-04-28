@@ -14,14 +14,9 @@ jobs:
 
       - name: Setup SSH for private submodule
         run: |
-          set -x
           mkdir -p ~/.ssh
           echo "${{ secrets.NOZZLE_DEPLOY_KEY }}" | base64 -d > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          head -1 ~/.ssh/id_ed25519
-          tail -1 ~/.ssh/id_ed25519
-          wc -c < ~/.ssh/id_ed25519
-          file ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Fetch submodules
