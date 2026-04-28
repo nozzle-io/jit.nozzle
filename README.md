@@ -1,41 +1,36 @@
 # bbb.nozzle
 
-Max/MSP externals for GPU texture sharing via [nozzle](https://github.com/2bbb/nozzle) — a cross-platform alternative to Syphon (macOS) and Spout (Windows).
+Max/MSP externals for inter-process matrix sharing via [nozzle](https://github.com/2bbb/nozzle) — a cross-platform alternative to Syphon (macOS) and Spout (Windows).
 
-Shares textures between processes on the same machine. Built as universal binary externals (x86_64 + arm64) using the [min-api](https://github.com/Cycling74/min-api).
+Shares jit.matrix pixel data between processes on the same machine. Built as universal binary externals (x86_64 + arm64) using the [min-api](https://github.com/Cycling74/min-api).
 
 ## Externals
 
-### bbb.nozzle.send
+### jit.bbb.nozzle.send
 
-Publishes GPU textures to named shared streams.
+Accepts jit.matrix input and publishes pixel data to named shared streams.
 
 ```
-[bang]  ──►  bbb.nozzle.send  ──  (publishes frame on bang)
-[list w h]   @name "myStream"
-              @width 640
-              @height 480
+[jit.matrix]  ──►  jit.bbb.nozzle.send  ──►  [width height frame_index]
+                 @name "myStream"
 ```
 
 | Attribute | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | symbol | `"nozzle_sender"` | Sender name for discovery |
-| `width` | int | `640` | Texture width |
-| `height` | int | `480` | Texture height |
 
 | Message | Description |
 |---------|-------------|
-| `bang` | Publish one frame |
-| `list w h` | Set dimensions and reinitialize |
+| `jit_matrix` | Receive a jit.matrix and publish its pixel data |
 | `dump` | Print current status to console |
 
-### bbb.nozzle.receive
+### jit.bbb.nozzle.receive
 
-Receives GPU textures from a named sender. Outputs frame info on the left outlet, connection events on the right outlet.
+Receives matrix data from a named sender. Outputs jit.matrix on the left outlet, connection events on the right outlet.
 
 ```
-[bang]  ──►  bbb.nozzle.receive  ──►  [width height frame_index ...]
-              @name "myStream"    ──►  [sender info events]
+[bang]  ──►  jit.bbb.nozzle.receive  ──►  [jit_matrix output]
+              @name "myStream"         ──►  [sender info events]
               @timeout 0
 ```
 
@@ -46,7 +41,7 @@ Receives GPU textures from a named sender. Outputs frame info on the left outlet
 
 | Message | Description |
 |---------|-------------|
-| `bang` | Poll for new frame. Outputs `width height frame_index` on left outlet if available |
+| `bang` | Poll for new frame. Outputs jit_matrix on left outlet if available |
 | `connect` | Reconnect to sender |
 | `info` | Print connected sender info to console |
 
@@ -72,20 +67,20 @@ Built externals appear in `externals/` as `.mxo` bundles.
 
 - [min-api](https://github.com/Cycling74/min-api) — Max external development kit
 - [max-sdk-base](https://github.com/Cycling74/max-sdk-base) — Max SDK headers and resources
-- [nozzle](https://github.com/2bbb/nozzle) — Prebuilt static library at `deps/nozzle/`
+- [nozzle](https://github.com/2bbb/nozzle) — Shared texture library at `deps/nozzle/`
 
 ## Architecture
 
-The externals use nozzle's C ABI (`nozzle_c.h`) to avoid exception/RTTI conflicts with Max's runtime. The sender creates a named shared texture stream, the receiver connects by name and polls for frames via bang-driven polling.
+The externals use nozzle's C ABI (`nozzle_c.h`) to avoid exception/RTTI conflicts with Max's runtime. The sender accepts jit.matrix input and copies pixel data to an IOSurface-backed shared texture. The receiver polls for frames and outputs the data as jit.matrix.
 
 ```
-bbb.nozzle.send:   nozzle_sender_create → acquire_writable_frame → commit_frame (on bang)
-bbb.nozzle.receive: nozzle_receiver_create → acquire_frame → output dimensions (on bang)
+jit.bbb.nozzle.send:   jit_matrix → lock_pixels → memcpy to IOSurface → commit_frame
+jit.bbb.nozzle.receive: acquire_frame → lock_pixels → memcpy to jit.matrix → output
 ```
 
 ## Installation
 
-Copy `externals/bbb.nozzle.send.mxo` and `externals/bbb.nozzle.receive.mxo` to your Max packages folder, or place alongside your Max patcher.
+Copy `externals/jit.bbb.nozzle.send.mxo` and `externals/jit.bbb.nozzle.receive.mxo` to your Max packages folder, or place alongside your Max patcher.
 
 ## License
 

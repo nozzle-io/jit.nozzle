@@ -1,6 +1,6 @@
 {
     "title": "bbb.nozzle",
-    "description": "GPU texture sharing externals (nozzle-based)",
+    "description": "jit.matrix sharing externals (nozzle-based)",
     "author": "ISHII 2bit",
     "website": "https://github.com/2bbb/bbb.nozzle",
     "extends": "",
@@ -18,7 +18,7 @@
         }
     },
     "filelist": {
-        "externals/bbb.nozzle.send.mxo": {},
-        "externals/bbb.nozzle.receive.mxo": {}
+        "externals/jit.bbb.nozzle.send.mxo": {},
+        "externals/jit.bbb.nozzle.receive.mxo": {}
     }
 }
