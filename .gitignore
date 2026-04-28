@@ -1,0 +1,6 @@
+build/
+externals/
+help/*.maxhelp
+deps/nozzle/
+.DS_Store
+*.mxo

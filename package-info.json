@@ -1,0 +1,24 @@
+{
+    "title": "bbb.nozzle",
+    "description": "GPU texture sharing externals (nozzle-based)",
+    "author": "ISHII 2bit",
+    "website": "https://github.com/2bbb/bbb.nozzle",
+    "extends": "",
+    "extensible": 0,
+    "homepatcher": "",
+    "max_version_min": "8.0",
+    "os": {
+        "macintosh": {
+            "externals": [
+                "externals/"
+            ],
+            "help": [
+                "help/"
+            ]
+        }
+    },
+    "filelist": {
+        "externals/bbb.nozzle.send.mxo": {},
+        "externals/bbb.nozzle.receive.mxo": {}
+    }
+}
