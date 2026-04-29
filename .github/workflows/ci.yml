@@ -12,14 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup SSH for private submodule
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s' "${{ secrets.NOZZLE_DEPLOY_KEY }}" | base64 -d > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Configure git for private submodule
+        run: git config --global url."https://x-access-token:${{ secrets.NOZZLE_PAT }}@github.com/".insteadOf "https://github.com/"
 
-      - name: Fetch submodules
+      - name: Init submodules
         run: git submodule update --init --recursive
 
       - name: Configure
@@ -46,15 +42,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup SSH for private submodule
+      - name: Configure git for private submodule
         shell: bash
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s' "${{ secrets.NOZZLE_DEPLOY_KEY }}" | base64 -d > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+        run: git config --global url."https://x-access-token:${{ secrets.NOZZLE_PAT }}@github.com/".insteadOf "https://github.com/"
 
-      - name: Fetch submodules
+      - name: Init submodules
         run: git submodule update --init --recursive
 
       - name: Configure
