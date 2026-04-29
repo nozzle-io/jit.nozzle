@@ -1,6 +1,6 @@
 # bbb.nozzle
 
-Max/MSP externals for inter-process matrix sharing via [nozzle](https://github.com/2bbb/nozzle) — a cross-platform alternative to Syphon (macOS) and Spout (Windows).
+Max/MSP externals for inter-process matrix sharing via [nozzle](https://github.com/nozzle-io/nozzle) — a cross-platform alternative to Syphon (macOS) and Spout (Windows).
 
 Shares jit.matrix and OpenGL texture data between processes on the same machine. Built as universal binary externals (x86_64 + arm64) using the [min-api](https://github.com/Cycling74/min-api).
 
@@ -89,7 +89,7 @@ Built externals appear in `externals/` as `.mxo` bundles.
 
 - [min-api](https://github.com/Cycling74/min-api) — Max external development kit
 - [max-sdk-base](https://github.com/Cycling74/max-sdk-base) — Max SDK headers and resources
-- [nozzle](https://github.com/2bbb/nozzle) — Shared texture library at `deps/nozzle/`
+- [nozzle](https://github.com/nozzle-io/nozzle) — Shared texture library at `deps/nozzle/`
 
 ## Architecture
 
