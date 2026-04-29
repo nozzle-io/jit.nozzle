@@ -73,7 +73,7 @@ public:
 
 	message<> dump_msg{this, "dump", "Print status",
 		MIN_FUNCTION {
-			cout << "jit.gl.bbb.nozzle.send status:" << endl;
+			cout << "jit.gl.nozzle.send status:" << endl;
 			cout << "  name: " << attr_to_string(name_attr) << endl;
 			cout << "  sender: " << (sender_ ? "active" : "inactive") << endl;
 			cout << "  cached gl texture: " << cached_gl_texture_name_ << endl;
@@ -105,12 +105,12 @@ private:
 
 		NozzleSenderDesc desc{};
 		desc.name = name.c_str();
-		desc.application_name = "jit.gl.bbb.nozzle.send";
+		desc.application_name = "jit.gl.nozzle.send";
 		desc.ring_buffer_size = 3;
 
 		NozzleErrorCode err = nozzle_sender_create(&desc, &sender_);
 		if(err != NOZZLE_OK) {
-			cerr << "jit.gl.bbb.nozzle.send: failed to create sender '" << name
+			cerr << "jit.gl.nozzle.send: failed to create sender '" << name
 			     << "' (error " << err << ")" << endl;
 			sender_ = nullptr;
 		}
@@ -121,17 +121,17 @@ private:
 
 		void *tex_obj = jit_object_findregistered(gensym(tex_name_str.c_str()));
 		if(!tex_obj) {
-			cerr << "jit.gl.bbb.nozzle.send: texture '" << tex_name_str << "' not found" << endl;
+			cerr << "jit.gl.nozzle.send: texture '" << tex_name_str << "' not found" << endl;
 			return;
 		}
 		if(jit_object_classname(tex_obj) != gensym("jit_gl_texture")) {
-			cerr << "jit.gl.bbb.nozzle.send: object '" << tex_name_str << "' is not a jit.gl.texture" << endl;
+			cerr << "jit.gl.nozzle.send: object '" << tex_name_str << "' is not a jit.gl.texture" << endl;
 			return;
 		}
 
 		long gl_id = (long)jit_object_method(tex_obj, gensym("gl_name"));
 		if(gl_id <= 0) {
-			cerr << "jit.gl.bbb.nozzle.send: texture '" << tex_name_str << "' has no valid GL name" << endl;
+			cerr << "jit.gl.nozzle.send: texture '" << tex_name_str << "' has no valid GL name" << endl;
 			return;
 		}
 
@@ -139,7 +139,7 @@ private:
 		long h = (long)jit_object_method(tex_obj, _jit_sym_dim, 1);
 
 		if(w <= 0 || h <= 0) {
-			cerr << "jit.gl.bbb.nozzle.send: texture has invalid dimensions" << endl;
+			cerr << "jit.gl.nozzle.send: texture has invalid dimensions" << endl;
 			return;
 		}
 
@@ -161,7 +161,7 @@ private:
 		);
 
 		if(nerr != NOZZLE_OK) {
-			cerr << "jit.gl.bbb.nozzle.send: publish failed (error " << nerr << ")" << endl;
+			cerr << "jit.gl.nozzle.send: publish failed (error " << nerr << ")" << endl;
 			return;
 		}
 
@@ -178,7 +178,7 @@ private:
 		int h = height_attr;
 
 		if(w <= 0 || h <= 0) {
-			cerr << "jit.gl.bbb.nozzle.send: set @width and @height before publishing" << endl;
+			cerr << "jit.gl.nozzle.send: set @width and @height before publishing" << endl;
 			return;
 		}
 
@@ -200,7 +200,7 @@ private:
 		);
 
 		if(nerr != NOZZLE_OK) {
-			cerr << "jit.gl.bbb.nozzle.send: publish failed (error " << nerr << ")" << endl;
+			cerr << "jit.gl.nozzle.send: publish failed (error " << nerr << ")" << endl;
 			return;
 		}
 
@@ -225,7 +225,7 @@ private:
 		);
 
 		if(nerr != NOZZLE_OK) {
-			cerr << "jit.gl.bbb.nozzle.send: republish failed (error " << nerr << ")" << endl;
+			cerr << "jit.gl.nozzle.send: republish failed (error " << nerr << ")" << endl;
 			return;
 		}
 

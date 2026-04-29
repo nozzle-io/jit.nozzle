@@ -60,19 +60,19 @@ public:
 	message<> info_msg{this, "info", "Print sender info",
 		MIN_FUNCTION {
 			if(!receiver_) {
-				cout << "jit.bbb.nozzle.receive: not connected" << endl;
+				cout << "jit.nozzle.receive: not connected" << endl;
 				return {};
 			}
 			NozzleConnectedSenderInfo info{};
 			NozzleErrorCode err = nozzle_receiver_get_connected_info(receiver_, &info);
 			if(err == NOZZLE_OK) {
-				cout << "jit.bbb.nozzle.receive connected to:" << endl;
+				cout << "jit.nozzle.receive connected to:" << endl;
 				cout << "  name: " << (info.name ? info.name : "(null)") << endl;
 				cout << "  app:  " << (info.application_name ? info.application_name : "(null)") << endl;
 				cout << "  size: " << info.width << " x " << info.height << endl;
 				cout << "  frames: " << info.frame_counter << endl;
 			} else {
-				cout << "jit.bbb.nozzle.receive: not connected (error " << err << ")" << endl;
+				cout << "jit.nozzle.receive: not connected (error " << err << ")" << endl;
 			}
 			return {};
 		}
@@ -102,16 +102,16 @@ private:
 
 		NozzleReceiverDesc desc{};
 		desc.name = name.c_str();
-		desc.application_name = "jit.bbb.nozzle.receive";
+		desc.application_name = "jit.nozzle.receive";
 		desc.receive_mode = NOZZLE_RECEIVE_LATEST_ONLY;
 
 		NozzleErrorCode err = nozzle_receiver_create(&desc, &receiver_);
 		if(err != NOZZLE_OK) {
-			cerr << "jit.bbb.nozzle.receive: failed to connect to '" << name
+			cerr << "jit.nozzle.receive: failed to connect to '" << name
 			     << "' (error " << err << ")" << endl;
 			receiver_ = nullptr;
 		} else {
-			cout << "jit.bbb.nozzle.receive: connected to '" << name << "'" << endl;
+			cout << "jit.nozzle.receive: connected to '" << name << "'" << endl;
 		}
 	}
 
@@ -143,7 +143,7 @@ private:
 		NozzleMappedPixels mapped{};
 		err = nozzle_frame_lock_pixels(frame, &mapped);
 		if(err != NOZZLE_OK) {
-			cerr << "jit.bbb.nozzle.receive: lock pixels failed (error " << err << ")" << endl;
+			cerr << "jit.nozzle.receive: lock pixels failed (error " << err << ")" << endl;
 			nozzle_frame_release(frame);
 			return;
 		}
@@ -170,7 +170,7 @@ private:
 				}
 				output_matrix_ = (t_object *)jit_object_new(_jit_sym_jit_matrix);
 				if(!output_matrix_) {
-					cerr << "jit.bbb.nozzle.receive: failed to create output matrix" << endl;
+					cerr << "jit.nozzle.receive: failed to create output matrix" << endl;
 					nozzle_frame_unlock_pixels(frame);
 					nozzle_frame_release(frame);
 					return;

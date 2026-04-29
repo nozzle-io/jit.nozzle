@@ -2,3 +2,4 @@ build/
 externals/
 .DS_Store
 *.mxo
+build-test/

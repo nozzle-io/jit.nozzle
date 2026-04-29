@@ -1,4 +1,4 @@
-# bbb.nozzle
+# nozzle.max
 
 Max/MSP externals for inter-process matrix sharing via [nozzle](https://github.com/nozzle-io/nozzle) — a cross-platform alternative to Syphon (macOS) and Spout (Windows).
 
@@ -6,12 +6,12 @@ Shares jit.matrix and OpenGL texture data between processes on the same machine.
 
 ## Externals
 
-### jit.bbb.nozzle.send
+### jit.nozzle.send
 
 Accepts jit.matrix input and publishes pixel data to named shared streams.
 
 ```
-[jit.matrix]  ──►  jit.bbb.nozzle.send  ──►  [width height frame_index]
+[jit.matrix]  ──►  jit.nozzle.send  ──►  [width height frame_index]
                  @name "myStream"
 ```
 
@@ -24,12 +24,12 @@ Accepts jit.matrix input and publishes pixel data to named shared streams.
 | `jit_matrix` | Receive a jit.matrix and publish its pixel data |
 | `dump` | Print current status to console |
 
-### jit.gl.bbb.nozzle.send
+### jit.gl.nozzle.send
 
 Accepts jit.gl.texture input (via `jit_gl_texture` message) and publishes the OpenGL texture to named shared streams.
 
 ```
-[jit_gl_texture name]  ──►  jit.gl.bbb.nozzle.send  ──►  [width height frame_index]
+[jit_gl_texture name]  ──►  jit.gl.nozzle.send  ──►  [width height frame_index]
                           @name "myStream"
 ```
 
@@ -43,12 +43,12 @@ Accepts jit.gl.texture input (via `jit_gl_texture` message) and publishes the Op
 | `bang` | Re-publish the last cached texture |
 | `dump` | Print current status to console |
 
-### jit.gl.bbb.nozzle.receive
+### jit.gl.nozzle.receive
 
 Receives GL texture data from a named sender. Outputs `jit_gl_texture` on the left outlet, frame info on the right outlet.
 
 ```
-[draw]  ──►  jit.gl.bbb.nozzle.receive  ──►  [jit_gl_texture output]
+[draw]  ──►  jit.gl.nozzle.receive  ──►  [jit_gl_texture output]
              @name "myStream"             ──►  [frame info events]
              @out_name "nozzle_recv_tex"
              @timeout 0
@@ -70,8 +70,8 @@ Receives GL texture data from a named sender. Outputs `jit_gl_texture` on the le
 ## Build
 
 ```bash
-git clone --recursive https://github.com/2bbb/bbb.nozzle.git
-cd bbb.nozzle
+git clone --recursive https://github.com/2bbb/nozzle.max.git
+cd nozzle.max
 cmake -B build
 cmake --build build
 ```
@@ -96,15 +96,15 @@ Built externals appear in `externals/` as `.mxo` bundles.
 The externals use nozzle's C ABI (`nozzle_c.h`) to avoid exception/RTTI conflicts with Max's runtime. The sender accepts jit.matrix input and copies pixel data to an IOSurface-backed shared texture. The receiver polls for frames and outputs the data as jit.matrix.
 
 ```
-jit.bbb.nozzle.send:   jit_matrix → lock_pixels → memcpy to IOSurface → commit_frame
-jit.bbb.nozzle.receive: acquire_frame → lock_pixels → memcpy to jit.matrix → output
-jit.gl.bbb.nozzle.send:   jit_gl_texture → get GL name → nozzle_sender_publish_gl_texture
-jit.gl.bbb.nozzle.receive: acquire_frame → nozzle_frame_copy_to_gl_texture → output jit_gl_texture
+jit.nozzle.send:   jit_matrix → lock_pixels → memcpy to IOSurface → commit_frame
+jit.nozzle.receive: acquire_frame → lock_pixels → memcpy to jit.matrix → output
+jit.gl.nozzle.send:   jit_gl_texture → get GL name → nozzle_sender_publish_gl_texture
+jit.gl.nozzle.receive: acquire_frame → nozzle_frame_copy_to_gl_texture → output jit_gl_texture
 ```
 
 ## Installation
 
-Copy `externals/jit.bbb.nozzle.send.mxo`, `externals/jit.bbb.nozzle.receive.mxo`, `externals/jit.gl.bbb.nozzle.send.mxo`, and `externals/jit.gl.bbb.nozzle.receive.mxo` to your Max packages folder, or place alongside your Max patcher.
+Copy `externals/jit.nozzle.send.mxo`, `externals/jit.nozzle.receive.mxo`, `externals/jit.gl.nozzle.send.mxo`, and `externals/jit.gl.nozzle.receive.mxo` to your Max packages folder, or place alongside your Max patcher.
 
 ## License
 

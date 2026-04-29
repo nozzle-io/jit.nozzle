@@ -49,7 +49,7 @@ public:
 
 	message<> dump_msg{this, "dump", "Print status",
 		MIN_FUNCTION {
-			cout << "jit.bbb.nozzle.send status:" << endl;
+			cout << "jit.nozzle.send status:" << endl;
 			cout << "  name: " << attr_to_string(name_attr) << endl;
 			cout << "  sender: " << (sender_ ? "active" : "inactive") << endl;
 			cout << "  frames sent: " << frame_count_ << endl;
@@ -76,12 +76,12 @@ private:
 
 		NozzleSenderDesc desc{};
 		desc.name = name.c_str();
-		desc.application_name = "jit.bbb.nozzle.send";
+		desc.application_name = "jit.nozzle.send";
 		desc.ring_buffer_size = 3;
 
 		NozzleErrorCode err = nozzle_sender_create(&desc, &sender_);
 		if(err != NOZZLE_OK) {
-			cerr << "jit.bbb.nozzle.send: failed to create sender '" << name
+			cerr << "jit.nozzle.send: failed to create sender '" << name
 			     << "' (error " << err << ")" << endl;
 			sender_ = nullptr;
 		}
@@ -93,11 +93,11 @@ private:
 		// find the named jit.matrix
 		void *matrix_obj = jit_object_findregistered((t_symbol *)matrix_name);
 		if(!matrix_obj) {
-			cerr << "jit.bbb.nozzle.send: matrix '" << matrix_name << "' not found" << endl;
+			cerr << "jit.nozzle.send: matrix '" << matrix_name << "' not found" << endl;
 			return;
 		}
 		if(jit_object_classname(matrix_obj) != _jit_sym_jit_matrix) {
-			cerr << "jit.bbb.nozzle.send: object '" << matrix_name << "' is not a jit.matrix" << endl;
+			cerr << "jit.nozzle.send: object '" << matrix_name << "' is not a jit.matrix" << endl;
 			return;
 		}
 
@@ -118,7 +118,7 @@ private:
 		jit_object_method(matrix_obj, _jit_sym_getdata, &bp);
 
 		if(!bp || minfo.dim[0] <= 0 || minfo.dim[1] <= 0) {
-			cerr << "jit.bbb.nozzle.send: matrix has no data" << endl;
+			cerr << "jit.nozzle.send: matrix has no data" << endl;
 			jit_object_method(matrix_obj, _jit_sym_lock, savelock);
 			return;
 		}
@@ -136,7 +136,7 @@ private:
 				sender_, w, h, NOZZLE_FORMAT_RGBA8_UNORM, &frame
 			);
 			if(err != NOZZLE_OK || !frame) {
-				cerr << "jit.bbb.nozzle.send: acquire failed (error " << err << ")" << endl;
+				cerr << "jit.nozzle.send: acquire failed (error " << err << ")" << endl;
 				jit_object_method(matrix_obj, _jit_sym_lock, savelock);
 				return;
 			}
@@ -145,7 +145,7 @@ private:
 			NozzleMappedPixels mapped{};
 			err = nozzle_frame_lock_writable_pixels(frame, &mapped);
 			if(err != NOZZLE_OK) {
-				cerr << "jit.bbb.nozzle.send: lock writable pixels failed (error " << err << ")" << endl;
+				cerr << "jit.nozzle.send: lock writable pixels failed (error " << err << ")" << endl;
 				nozzle_frame_release(frame);
 				jit_object_method(matrix_obj, _jit_sym_lock, savelock);
 				return;
@@ -169,7 +169,7 @@ private:
 			// commit frame
 			err = nozzle_sender_commit_frame(sender_, frame);
 			if(err != NOZZLE_OK) {
-				cerr << "jit.bbb.nozzle.send: commit failed (error " << err << ")" << endl;
+				cerr << "jit.nozzle.send: commit failed (error " << err << ")" << endl;
 			}
 
 			// get frame info for output

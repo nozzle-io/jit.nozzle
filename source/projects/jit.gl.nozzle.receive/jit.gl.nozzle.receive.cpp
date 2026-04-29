@@ -70,19 +70,19 @@ public:
 	message<> info_msg{this, "info", "Print sender info",
 		MIN_FUNCTION {
 			if(!receiver_) {
-				cout << "jit.gl.bbb.nozzle.receive: not connected" << endl;
+				cout << "jit.gl.nozzle.receive: not connected" << endl;
 				return {};
 			}
 			NozzleConnectedSenderInfo info{};
 			NozzleErrorCode err = nozzle_receiver_get_connected_info(receiver_, &info);
 			if(err == NOZZLE_OK) {
-				cout << "jit.gl.bbb.nozzle.receive connected to:" << endl;
+				cout << "jit.gl.nozzle.receive connected to:" << endl;
 				cout << "  name: " << (info.name ? info.name : "(null)") << endl;
 				cout << "  app:  " << (info.application_name ? info.application_name : "(null)") << endl;
 				cout << "  size: " << info.width << " x " << info.height << endl;
 				cout << "  frames: " << info.frame_counter << endl;
 			} else {
-				cout << "jit.gl.bbb.nozzle.receive: not connected (error " << err << ")" << endl;
+				cout << "jit.gl.nozzle.receive: not connected (error " << err << ")" << endl;
 			}
 			return {};
 		}
@@ -114,16 +114,16 @@ private:
 
 		NozzleReceiverDesc desc{};
 		desc.name = name.c_str();
-		desc.application_name = "jit.gl.bbb.nozzle.receive";
+		desc.application_name = "jit.gl.nozzle.receive";
 		desc.receive_mode = NOZZLE_RECEIVE_LATEST_ONLY;
 
 		NozzleErrorCode err = nozzle_receiver_create(&desc, &receiver_);
 		if(err != NOZZLE_OK) {
-			cerr << "jit.gl.bbb.nozzle.receive: failed to connect to '" << name
+			cerr << "jit.gl.nozzle.receive: failed to connect to '" << name
 			     << "' (error " << err << ")" << endl;
 			receiver_ = nullptr;
 		} else {
-			cout << "jit.gl.bbb.nozzle.receive: connected to '" << name << "'" << endl;
+			cout << "jit.gl.nozzle.receive: connected to '" << name << "'" << endl;
 		}
 	}
 
@@ -199,7 +199,7 @@ private:
 				);
 
 				if(!output_tex_obj_) {
-					cerr << "jit.gl.bbb.nozzle.receive: failed to create jit.gl.texture" << endl;
+					cerr << "jit.gl.nozzle.receive: failed to create jit.gl.texture" << endl;
 					nozzle_frame_release(frame);
 					return;
 				}
@@ -210,7 +210,7 @@ private:
 
 			long gl_id = jit_attr_getlong(output_tex_obj_, gensym("gl_name"));
 			if(gl_id <= 0) {
-				cerr << "jit.gl.bbb.nozzle.receive: internal texture has no valid GL name" << endl;
+				cerr << "jit.gl.nozzle.receive: internal texture has no valid GL name" << endl;
 				nozzle_frame_release(frame);
 				return;
 			}
@@ -225,7 +225,7 @@ private:
 			);
 
 			if(err != NOZZLE_OK) {
-				cerr << "jit.gl.bbb.nozzle.receive: copy to GL texture failed (error " << err << ")" << endl;
+				cerr << "jit.gl.nozzle.receive: copy to GL texture failed (error " << err << ")" << endl;
 			}
 		}
 
