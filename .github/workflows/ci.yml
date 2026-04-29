@@ -30,7 +30,7 @@ jobs:
 
       - name: Verify externals
         run: |
-          for ext in jit.bbb.nozzle.send jit.bbb.nozzle.receive jit.gl.bbb.nozzle.send jit.gl.bbb.nozzle.receive; do
+          for ext in jit.nozzle.send jit.nozzle.receive jit.gl.nozzle.send jit.gl.nozzle.receive; do
             binary="externals/${ext}.mxo/Contents/MacOS/${ext}"
             if [ ! -f "$binary" ]; then
               echo "Missing: $binary"
@@ -66,7 +66,7 @@ jobs:
       - name: Verify externals
         shell: bash
         run: |
-          for ext in jit.bbb.nozzle.send jit.bbb.nozzle.receive jit.gl.bbb.nozzle.send jit.gl.bbb.nozzle.receive; do
+          for ext in jit.nozzle.send jit.nozzle.receive jit.gl.nozzle.send jit.gl.nozzle.receive; do
             binary="externals/${ext}.mxe64"
             if [ ! -f "$binary" ]; then
               echo "Missing: $binary"
