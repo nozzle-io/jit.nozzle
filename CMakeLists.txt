@@ -9,6 +9,12 @@ if(APPLE AND NOT CMAKE_OSX_ARCHITECTURES)
 	set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "macOS architecture" FORCE)
 endif()
 
+# --- MSVC: Max SDK requires /MT (static CRT) ---
+if(MSVC)
+	cmake_policy(SET CMP0091 NEW)
+	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
  # --- Build nozzle from source (skip tests/examples) ---
 set(NOZZLE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(NOZZLE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
