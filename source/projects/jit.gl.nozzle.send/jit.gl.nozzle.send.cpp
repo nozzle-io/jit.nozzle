@@ -1,7 +1,7 @@
 #include "c74_min.h"
 
 extern "C" {
-#include <bbb/nozzle/nozzle_c.h>
+#include <nozzle/nozzle_c.h>
 }
 
 #include <mutex>
