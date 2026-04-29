@@ -3,4 +3,4 @@
 	url = https://github.com/Cycling74/min-api.git
 [submodule "deps/nozzle"]
 	path = deps/nozzle
-	url = git@github.com:nozzle-io/nozzle.git
+	url = https://github.com/nozzle-io/nozzle.git
