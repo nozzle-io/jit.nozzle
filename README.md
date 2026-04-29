@@ -70,7 +70,7 @@ Receives GL texture data from a named sender. Outputs `jit_gl_texture` on the le
 ## Build
 
 ```bash
-git clone --recursive https://github.com/2bbb/nozzle.max.git
+git clone --recursive https://github.com/nozzle-io/nozzle.max.git
 cd nozzle.max
 cmake -B build
 cmake --build build
