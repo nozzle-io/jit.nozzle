@@ -99,6 +99,7 @@ private:
 	c74::max::t_object *output_matrix_{nullptr};
 	std::mutex mutex_;
 	uint64_t frame_count_{0};
+	int acquire_log_throttle_{0};
 
 	void setup_receiver(const std::string& name) {
 		if(name.empty()) return;
@@ -141,12 +142,15 @@ private:
 		NozzleErrorCode err = nozzle_receiver_acquire_frame(receiver_, &acq, &frame);
 
 		if(err != NOZZLE_OK || !frame) {
-			if(err != NOZZLE_OK && err != NOZZLE_ERROR_SENDER_NOT_FOUND
-				&& err != NOZZLE_ERROR_TIMEOUT && err != NOZZLE_ERROR_SENDER_CLOSED) {
+			if(acquire_log_throttle_ <= 0) {
 				cerr << "jit.nozzle.receive: acquire failed (error " << err << ")" << endl;
+				acquire_log_throttle_ = 30;
+			} else {
+				acquire_log_throttle_--;
 			}
 			return;
 		}
+		acquire_log_throttle_ = 0;
 
 		NozzleFrameInfo finfo{};
 		nozzle_frame_get_info(frame, &finfo);
