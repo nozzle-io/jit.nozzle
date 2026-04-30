@@ -18,7 +18,7 @@ static std::string attr_to_string(const attribute<symbol> &a) {
 	return to_string(s);
 }
 
-class jit_gl_bbb_nozzle_send : public object<jit_gl_bbb_nozzle_send> {
+class jit_gl_nozzle_send : public object<jit_gl_nozzle_send> {
 public:
 	MIN_DESCRIPTION{"Publish OpenGL textures via nozzle (inter-process texture sharing)"};
 	MIN_TAGS{"nozzle, gl, texture, sharing, jit"};
@@ -83,8 +83,8 @@ public:
 		}
 	};
 
-	jit_gl_bbb_nozzle_send() {}
-	~jit_gl_bbb_nozzle_send() {
+	jit_gl_nozzle_send() {}
+	~jit_gl_nozzle_send() {
 		std::lock_guard<std::mutex> lock(mutex_);
 		if(sender_) {
 			nozzle_sender_destroy(sender_);
@@ -234,4 +234,4 @@ private:
 	}
 };
 
-MIN_EXTERNAL(jit_gl_bbb_nozzle_send);
+MIN_EXTERNAL(jit_gl_nozzle_send);

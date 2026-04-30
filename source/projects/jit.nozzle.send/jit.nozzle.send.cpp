@@ -19,7 +19,7 @@ static std::string attr_to_string(const attribute<symbol> &a) {
 	return to_string(s);
 }
 
-class jit_bbb_nozzle_send : public object<jit_bbb_nozzle_send> {
+class jit_nozzle_send : public object<jit_nozzle_send> {
 public:
 	MIN_DESCRIPTION{"Publish jit.matrix data via nozzle (inter-process texture sharing)"};
 	MIN_TAGS{"nozzle, matrix, sharing, jit"};
@@ -57,8 +57,8 @@ public:
 		}
 	};
 
-	jit_bbb_nozzle_send() {}
-	~jit_bbb_nozzle_send() {
+	jit_nozzle_send() {}
+	~jit_nozzle_send() {
 		std::lock_guard<std::mutex> lock(mutex_);
 		if(sender_) {
 			nozzle_sender_destroy(sender_);
@@ -170,13 +170,8 @@ private:
 			err = nozzle_sender_commit_frame(sender_, frame);
 			if(err != NOZZLE_OK) {
 				cerr << "jit.nozzle.send: commit failed (error " << err << ")" << endl;
-			}
-
-			// get frame info for output
-			if(err == NOZZLE_OK) {
-				NozzleFrameInfo finfo{};
-				nozzle_frame_get_info(frame, &finfo);
-				frame_count_ = finfo.frame_index;
+			} else {
+				frame_count_++;
 			}
 		}
 
@@ -188,4 +183,4 @@ private:
 	}
 };
 
-MIN_EXTERNAL(jit_bbb_nozzle_send);
+MIN_EXTERNAL(jit_nozzle_send);
