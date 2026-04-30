@@ -1,4 +1,4 @@
-# nozzle.max
+# jit.nozzle
 
 Max/MSP externals for inter-process matrix sharing via [nozzle](https://github.com/nozzle-io/nozzle) — a cross-platform alternative to Syphon (macOS) and Spout (Windows).
 
@@ -70,19 +70,19 @@ Receives GL texture data from a named sender. Outputs `jit_gl_texture` on the le
 ## Build
 
 ```bash
-git clone --recursive https://github.com/nozzle-io/nozzle.max.git
-cd nozzle.max
+git clone --recursive https://github.com/nozzle-io/jit.nozzle.git
+cd jit.nozzle
 cmake -B build
 cmake --build build
 ```
 
-Built externals appear in `externals/` as `.mxo` bundles.
+Built externals appear in `externals/` as `.mxo` bundles (macOS) or `.mxe64` files (Windows).
 
 ### Requirements
 
 - CMake 3.19+
 - C++17 compiler
-- macOS 12.0+ (Metal/IOSurface frameworks)
+- macOS 12.0+ (Metal/IOSurface frameworks) or Windows 10+ (D3D11)
 - Max 8.0+ (for loading the externals)
 
 ### Dependencies (git submodules)
@@ -104,7 +104,7 @@ jit.gl.nozzle.receive: acquire_frame → nozzle_frame_copy_to_gl_texture → out
 
 ## Installation
 
-Copy `externals/jit.nozzle.send.mxo`, `externals/jit.nozzle.receive.mxo`, `externals/jit.gl.nozzle.send.mxo`, and `externals/jit.gl.nozzle.receive.mxo` to your Max packages folder, or place alongside your Max patcher.
+Copy the `externals/` and `help/` folders into your Max packages directory, or download the latest release from [GitHub Releases](https://github.com/nozzle-io/jit.nozzle/releases).
 
 ## License
 

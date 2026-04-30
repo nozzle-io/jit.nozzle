@@ -33,6 +33,12 @@ jobs:
             echo "$archs" | grep -q "x86_64 arm64" || { echo "Not universal: $ext"; exit 1; }
           done
 
+      - name: Upload macOS externals
+        uses: actions/upload-artifact@v4
+        with:
+          name: jit.nozzle-macos
+          path: externals/
+
   build-windows:
     runs-on: windows-2022
     steps:
@@ -57,3 +63,41 @@ jobs:
             fi
             echo "OK: $binary"
           done
+
+      - name: Upload Windows externals
+        uses: actions/upload-artifact@v4
+        with:
+          name: jit.nozzle-windows
+          path: externals/
+
+  release:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: jit.nozzle-macos
+          path: jit.nozzle-macos/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: jit.nozzle-windows
+          path: jit.nozzle-windows/
+
+      - name: Package
+        run: |
+          zip -r jit.nozzle-macos.zip jit.nozzle-macos/
+          zip -r jit.nozzle-windows.zip jit.nozzle-windows/
+
+      - name: Update latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: latest
+          prerelease: false
+          files: |
+            jit.nozzle-macos.zip
+            jit.nozzle-windows.zip

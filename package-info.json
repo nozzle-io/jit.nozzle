@@ -1,8 +1,8 @@
 {
-    "title": "nozzle.max",
+    "title": "jit.nozzle",
     "description": "jit.matrix sharing externals (nozzle-based)",
     "author": "ISHII 2bit",
-    "website": "https://github.com/2bbb/nozzle.max",
+    "website": "https://github.com/nozzle-io/jit.nozzle",
     "extends": "",
     "extensible": 0,
     "homepatcher": "",
