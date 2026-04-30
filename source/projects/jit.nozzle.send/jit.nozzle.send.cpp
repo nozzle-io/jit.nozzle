@@ -74,6 +74,11 @@ private:
 	void setup_sender(const std::string& name) {
 		if(name.empty()) return;
 
+		if(sender_) {
+			nozzle_sender_destroy(sender_);
+			sender_ = nullptr;
+		}
+
 		NozzleSenderDesc desc{};
 		desc.name = name.c_str();
 		desc.application_name = "jit.nozzle.send";

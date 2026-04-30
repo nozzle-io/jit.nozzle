@@ -100,6 +100,11 @@ private:
 	void setup_receiver(const std::string& name) {
 		if(name.empty()) return;
 
+		if(receiver_) {
+			nozzle_receiver_destroy(receiver_);
+			receiver_ = nullptr;
+		}
+
 		NozzleReceiverDesc desc{};
 		desc.name = name.c_str();
 		desc.application_name = "jit.nozzle.receive";
@@ -132,7 +137,13 @@ private:
 		NozzleFrame *frame = nullptr;
 		NozzleErrorCode err = nozzle_receiver_acquire_frame(receiver_, &acq, &frame);
 
-		if(err != NOZZLE_OK || !frame) return;
+		if(err != NOZZLE_OK || !frame) {
+			if(err != NOZZLE_OK && err != NOZZLE_ERROR_SENDER_NOT_FOUND
+				&& err != NOZZLE_ERROR_TIMEOUT && err != NOZZLE_ERROR_SENDER_CLOSED) {
+				cerr << "jit.nozzle.receive: acquire failed (error " << err << ")" << endl;
+			}
+			return;
+		}
 
 		NozzleFrameInfo finfo{};
 		nozzle_frame_get_info(frame, &finfo);
