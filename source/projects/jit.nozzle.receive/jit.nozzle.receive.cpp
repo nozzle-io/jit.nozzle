@@ -92,11 +92,13 @@ public:
 		if(output_matrix_) {
 			c74::max::jit_object_free(output_matrix_);
 			output_matrix_ = nullptr;
+			matrix_name_ = nullptr;
 		}
 	}
 
 private:
 	c74::max::t_object *output_matrix_{nullptr};
+	c74::max::t_symbol *matrix_name_{nullptr};
 	std::mutex mutex_;
 	uint64_t frame_count_{0};
 	int acquire_log_throttle_{0};
@@ -195,10 +197,13 @@ private:
 				if(output_matrix_) {
 					jit_object_free(output_matrix_);
 					output_matrix_ = nullptr;
+					matrix_name_ = nullptr;
 				}
-				output_matrix_ = (t_object *)jit_object_new(_jit_sym_jit_matrix);
+				matrix_name_ = jit_symbol_unique();
+				output_matrix_ = (t_object *)jit_object_new(_jit_sym_jit_matrix, matrix_name_);
 				if(!output_matrix_) {
 					cerr << "jit.nozzle.receive: failed to create output matrix" << endl;
+					matrix_name_ = nullptr;
 					nozzle_frame_unlock_pixels(frame);
 					nozzle_frame_release(frame);
 					return;
@@ -241,19 +246,15 @@ private:
 
 		frame_count_ = finfo.frame_index;
 
-		if(output_matrix_) {
-			t_symbol *matrix_name = (t_symbol *)jit_object_method(output_matrix_, _jit_sym_getname);
+		if(output_matrix_ && matrix_name_) {
 			cout << "DEBUG: acquire OK frame=" << finfo.frame_index
 			     << " w=" << finfo.width << " h=" << finfo.height
 			     << " has_data=" << has_data
-			     << " matrix=" << (matrix_name ? matrix_name->s_name : "(null)") << endl;
-			if(matrix_name) {
-				matrix_out.send("jit_matrix", c74::min::symbol(matrix_name->s_name));
-			} else {
-				cerr << "DEBUG: matrix_name is null!" << endl;
-			}
+			     << " matrix=" << matrix_name_->s_name << endl;
+			matrix_out.send("jit_matrix", c74::min::symbol(matrix_name_->s_name));
 		} else {
-			cerr << "DEBUG: output_matrix_ is null!" << endl;
+			cerr << "DEBUG: output_matrix_=" << (output_matrix_ ? "ok" : "null")
+			     << " matrix_name_=" << (matrix_name_ ? matrix_name_->s_name : "null") << endl;
 		}
 	}
 };
