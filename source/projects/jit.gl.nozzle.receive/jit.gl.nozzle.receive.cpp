@@ -28,6 +28,10 @@ public:
 	outlet<> texture_out{this, "(jit_gl_texture) output texture name"};
 	outlet<> info_out{this, "(anything) frame info events"};
 
+private:
+	NozzleReceiver *receiver_{nullptr};
+
+public:
 	attribute<symbol> name_attr{this, "name", "nozzle_sender",
 		description{"Sender name to connect to"},
 		setter{[this](const atoms& args, int) -> atoms {
@@ -102,7 +106,6 @@ public:
 	}
 
 private:
-	NozzleReceiver *receiver_{nullptr};
 	c74::max::t_object *output_tex_obj_{nullptr};
 	std::mutex mutex_;
 	uint64_t frame_count_{0};

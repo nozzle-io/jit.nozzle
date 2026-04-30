@@ -28,6 +28,10 @@ public:
 	inlet<> input{this, "(jit_matrix) input matrix to send"};
 	outlet<> frame_out{this, "(list) width height frame_index on publish"};
 
+private:
+	NozzleSender *sender_{nullptr};
+
+public:
 	attribute<symbol> name_attr{this, "name", "nozzle_sender",
 		description{"Sender name (used for discovery by receivers)"},
 		setter{[this](const atoms& args, int) -> atoms {
@@ -67,7 +71,6 @@ public:
 	}
 
 private:
-	NozzleSender *sender_{nullptr};
 	std::mutex mutex_;
 	uint64_t frame_count_{0};
 

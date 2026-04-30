@@ -29,6 +29,10 @@ public:
 	outlet<> matrix_out{this, "(jit_matrix) output matrix with received data"};
 	outlet<> info_out{this, "(anything) sender info events"};
 
+private:
+	NozzleReceiver *receiver_{nullptr};
+
+public:
 	attribute<symbol> name_attr{this, "name", "nozzle_sender",
 		description{"Sender name to connect to"},
 		setter{[this](const atoms& args, int) -> atoms {
@@ -92,7 +96,6 @@ public:
 	}
 
 private:
-	NozzleReceiver *receiver_{nullptr};
 	c74::max::t_object *output_matrix_{nullptr};
 	std::mutex mutex_;
 	uint64_t frame_count_{0};
