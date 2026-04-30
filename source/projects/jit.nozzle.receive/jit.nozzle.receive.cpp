@@ -143,7 +143,16 @@ private:
 
 		if(err != NOZZLE_OK || !frame) {
 			if(acquire_log_throttle_ <= 0) {
-				cerr << "jit.nozzle.receive: acquire failed (error " << err << ")" << endl;
+				NozzleConnectedSenderInfo dbg_info{};
+				NozzleErrorCode dbg_err = nozzle_receiver_get_connected_info(receiver_, &dbg_info);
+				if(dbg_err == NOZZLE_OK) {
+					cerr << "jit.nozzle.receive: acquire error " << err
+					     << " sender_frames=" << dbg_info.frame_counter
+					     << " size=" << dbg_info.width << "x" << dbg_info.height << endl;
+				} else {
+					cerr << "jit.nozzle.receive: acquire error " << err
+					     << " get_info also failed (" << dbg_err << ")" << endl;
+				}
 				acquire_log_throttle_ = 30;
 			} else {
 				acquire_log_throttle_--;
@@ -166,6 +175,7 @@ private:
 			return;
 		}
 
+		bool has_data = false;
 		{
 			std::lock_guard<std::mutex> lock(mutex_);
 
@@ -209,6 +219,7 @@ private:
 			jit_object_method(output_matrix_, _jit_sym_getdata, &out_bp);
 
 			if(out_bp) {
+				has_data = true;
 				t_jit_matrix_info out_info{};
 				jit_object_method(output_matrix_, _jit_sym_getinfo, &out_info);
 				uint32_t src_row_bytes = mapped.row_bytes;
@@ -232,9 +243,17 @@ private:
 
 		if(output_matrix_) {
 			t_symbol *matrix_name = (t_symbol *)jit_object_method(output_matrix_, _jit_sym_getname);
+			cout << "DEBUG: acquire OK frame=" << finfo.frame_index
+			     << " w=" << finfo.width << " h=" << finfo.height
+			     << " has_data=" << has_data
+			     << " matrix=" << (matrix_name ? matrix_name->s_name : "(null)") << endl;
 			if(matrix_name) {
 				matrix_out.send("jit_matrix", c74::min::symbol(matrix_name->s_name));
+			} else {
+				cerr << "DEBUG: matrix_name is null!" << endl;
 			}
+		} else {
+			cerr << "DEBUG: output_matrix_ is null!" << endl;
 		}
 	}
 };
