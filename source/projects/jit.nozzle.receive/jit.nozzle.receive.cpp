@@ -199,8 +199,7 @@ private:
 					output_matrix_ = nullptr;
 					matrix_name_ = nullptr;
 				}
-				matrix_name_ = jit_symbol_unique();
-				output_matrix_ = (t_object *)jit_object_new(_jit_sym_jit_matrix, matrix_name_);
+				output_matrix_ = (t_object *)jit_object_new(_jit_sym_jit_matrix);
 				if(!output_matrix_) {
 					cerr << "jit.nozzle.receive: failed to create output matrix" << endl;
 					matrix_name_ = nullptr;
@@ -217,6 +216,10 @@ private:
 				new_info.planecount = 4;
 				new_info.type = _jit_sym_char;
 				jit_object_method(output_matrix_, _jit_sym_setinfo, &new_info);
+				jit_object_method(output_matrix_, _jit_sym_clear);
+
+				matrix_name_ = jit_symbol_unique();
+				jit_object_method(output_matrix_, _jit_sym_register, matrix_name_);
 			}
 
 			void *out_savelock = jit_object_method(output_matrix_, _jit_sym_lock, (void *)1);
