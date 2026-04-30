@@ -43,9 +43,12 @@ static bool jitter_to_nozzle_format(
 			case 4: out = {NOZZLE_FORMAT_RGBA32_FLOAT, 16}; return true;
 		}
 	} else if(type == _jit_sym_long) {
+		// IOSurface doesn't support UINT formats, treat as float32 (same byte width)
 		switch(planecount) {
-			case 1: out = {NOZZLE_FORMAT_R32_UINT, 4}; return true;
-			case 4: out = {NOZZLE_FORMAT_RGBA32_UINT, 16}; return true;
+			case 1: out = {NOZZLE_FORMAT_R32_FLOAT, 4}; return true;
+			case 2: out = {NOZZLE_FORMAT_RG32_FLOAT, 8}; return true;
+			case 3: out = {NOZZLE_FORMAT_RGBA32_FLOAT, 12}; return true;
+			case 4: out = {NOZZLE_FORMAT_RGBA32_FLOAT, 16}; return true;
 		}
 	}
 	return false;
