@@ -26,7 +26,7 @@ public:
 	MIN_AUTHOR{"ISHII 2bit"};
 
 	inlet<> input{this, "(bang) poll for new frame"};
-	outlet<> matrix_out{this, "(jit_matrix) output matrix with received data"};
+	outlet<> matrix_out{this, "(jit_matrix) output matrix with received data", "jit_matrix"};
 	outlet<> info_out{this, "(anything) sender info events"};
 
 private:
