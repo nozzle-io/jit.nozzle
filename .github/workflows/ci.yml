@@ -80,17 +80,15 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: jit.nozzle-macos
-          path: jit.nozzle-macos/
+          path: jit.nozzle/externals/
 
       - uses: actions/download-artifact@v4
         with:
           name: jit.nozzle-windows
-          path: jit.nozzle-windows/
+          path: jit.nozzle/externals/
 
       - name: Package
-        run: |
-          zip -r jit.nozzle-macos.zip jit.nozzle-macos/
-          zip -r jit.nozzle-windows.zip jit.nozzle-windows/
+        run: zip -r jit.nozzle.zip jit.nozzle/
 
       - name: Update latest release
         uses: softprops/action-gh-release@v2
@@ -98,6 +96,4 @@ jobs:
           tag_name: latest
           name: latest
           prerelease: false
-          files: |
-            jit.nozzle-macos.zip
-            jit.nozzle-windows.zip
+          files: jit.nozzle.zip
