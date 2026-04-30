@@ -19,6 +19,36 @@ static std::string attr_to_string(const attribute<symbol> &a) {
 	return to_string(s);
 }
 
+struct jitter_format_info {
+	c74::max::t_symbol *type;
+	int planecount;
+	uint32_t bytes_per_pixel;
+};
+
+static jitter_format_info nozzle_to_jitter_format(NozzleTextureFormat fmt) {
+	using namespace c74::max;
+	switch(fmt) {
+		case NOZZLE_FORMAT_R8_UNORM:    return {_jit_sym_char, 1, 1};
+		case NOZZLE_FORMAT_RG8_UNORM:   return {_jit_sym_char, 2, 2};
+		case NOZZLE_FORMAT_RGBA8_UNORM: return {_jit_sym_char, 4, 4};
+		case NOZZLE_FORMAT_BGRA8_UNORM: return {_jit_sym_char, 4, 4};
+		case NOZZLE_FORMAT_RGBA8_SRGB:  return {_jit_sym_char, 4, 4};
+		case NOZZLE_FORMAT_BGRA8_SRGB:  return {_jit_sym_char, 4, 4};
+		case NOZZLE_FORMAT_R32_FLOAT:   return {_jit_sym_float32, 1, 4};
+		case NOZZLE_FORMAT_RG32_FLOAT:  return {_jit_sym_float32, 2, 8};
+		case NOZZLE_FORMAT_RGBA32_FLOAT:return {_jit_sym_float32, 4, 16};
+		case NOZZLE_FORMAT_R16_FLOAT:   return {_jit_sym_float32, 1, 2};
+		case NOZZLE_FORMAT_RG16_FLOAT:  return {_jit_sym_float32, 2, 4};
+		case NOZZLE_FORMAT_RGBA16_FLOAT:return {_jit_sym_float32, 4, 8};
+		case NOZZLE_FORMAT_R16_UNORM:   return {_jit_sym_long, 1, 2};
+		case NOZZLE_FORMAT_RG16_UNORM:  return {_jit_sym_long, 2, 4};
+		case NOZZLE_FORMAT_RGBA16_UNORM:return {_jit_sym_long, 4, 8};
+		case NOZZLE_FORMAT_R32_UINT:    return {_jit_sym_long, 1, 4};
+		case NOZZLE_FORMAT_RGBA32_UINT: return {_jit_sym_long, 4, 16};
+		default:                        return {_jit_sym_char, 4, 4};
+	}
+}
+
 class jit_nozzle_receive : public object<jit_nozzle_receive> {
 public:
 	MIN_DESCRIPTION{"Receive jit.matrix data via nozzle (inter-process texture sharing)"};
@@ -168,6 +198,7 @@ private:
 
 		uint32_t w = finfo.width;
 		uint32_t h = finfo.height;
+		auto jfmt = nozzle_to_jitter_format(finfo.format);
 
 		NozzleMappedPixels mapped{};
 		err = nozzle_frame_lock_pixels(frame, &mapped);
@@ -187,8 +218,8 @@ private:
 				jit_object_method(output_matrix_, _jit_sym_getinfo, &existing_info);
 				if(existing_info.dim[0] != static_cast<long>(w) ||
 				   existing_info.dim[1] != static_cast<long>(h) ||
-				   existing_info.planecount != 4 ||
-				   existing_info.type != _jit_sym_char) {
+				   existing_info.planecount != jfmt.planecount ||
+				   existing_info.type != jfmt.type) {
 					need_recreate = true;
 				}
 			}
@@ -213,8 +244,8 @@ private:
 				new_info.dimcount = 2;
 				new_info.dim[0] = w;
 				new_info.dim[1] = h;
-				new_info.planecount = 4;
-				new_info.type = _jit_sym_char;
+				new_info.planecount = jfmt.planecount;
+				new_info.type = jfmt.type;
 				jit_object_method(output_matrix_, _jit_sym_setinfo, &new_info);
 				jit_object_method(output_matrix_, _jit_sym_clear);
 
@@ -233,7 +264,7 @@ private:
 				uint32_t src_row_bytes = mapped.row_bytes;
 				uint32_t dst_row_bytes = static_cast<uint32_t>(out_info.dimstride[1]);
 				uint32_t copy_bytes = std::min(src_row_bytes, dst_row_bytes);
-				copy_bytes = std::min(copy_bytes, w * 4u);
+				copy_bytes = std::min(copy_bytes, w * jfmt.bytes_per_pixel);
 
 				auto *src = static_cast<const unsigned char *>(mapped.data);
 				for(uint32_t y = 0; y < h; y++) {

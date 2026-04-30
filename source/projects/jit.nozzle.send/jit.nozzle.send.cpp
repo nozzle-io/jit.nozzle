@@ -19,6 +19,38 @@ static std::string attr_to_string(const attribute<symbol> &a) {
 	return to_string(s);
 }
 
+struct jitter_matrix_format {
+	NozzleTextureFormat nozzle_fmt;
+	uint32_t bytes_per_pixel;
+};
+
+static bool jitter_to_nozzle_format(
+	c74::max::t_symbol *type, int planecount, jitter_matrix_format &out
+) {
+	using namespace c74::max;
+	if(type == _jit_sym_char) {
+		switch(planecount) {
+			case 1: out = {NOZZLE_FORMAT_R8_UNORM, 1}; return true;
+			case 2: out = {NOZZLE_FORMAT_RG8_UNORM, 2}; return true;
+			case 3: out = {NOZZLE_FORMAT_RGBA8_UNORM, 3}; return true;
+			case 4: out = {NOZZLE_FORMAT_RGBA8_UNORM, 4}; return true;
+		}
+	} else if(type == _jit_sym_float32) {
+		switch(planecount) {
+			case 1: out = {NOZZLE_FORMAT_R32_FLOAT, 4}; return true;
+			case 2: out = {NOZZLE_FORMAT_RG32_FLOAT, 8}; return true;
+			case 3: out = {NOZZLE_FORMAT_RGBA32_FLOAT, 12}; return true;
+			case 4: out = {NOZZLE_FORMAT_RGBA32_FLOAT, 16}; return true;
+		}
+	} else if(type == _jit_sym_long) {
+		switch(planecount) {
+			case 1: out = {NOZZLE_FORMAT_R32_UINT, 4}; return true;
+			case 4: out = {NOZZLE_FORMAT_RGBA32_UINT, 16}; return true;
+		}
+	}
+	return false;
+}
+
 class jit_nozzle_send : public object<jit_nozzle_send> {
 public:
 	MIN_DESCRIPTION{"Publish jit.matrix data via nozzle (inter-process texture sharing)"};
@@ -135,13 +167,21 @@ private:
 		uint32_t h = static_cast<uint32_t>(minfo.dim[1]);
 		uint32_t matrix_row_bytes = static_cast<uint32_t>(minfo.dimstride[1]);
 
+		jitter_matrix_format jfmt{};
+		if(!jitter_to_nozzle_format(minfo.type, minfo.planecount, jfmt)) {
+			cerr << "jit.nozzle.send: unsupported matrix type "
+			     << minfo.type->s_name << " planecount=" << minfo.planecount << endl;
+			jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+			return;
+		}
+
 		{
 			std::lock_guard<std::mutex> lock(mutex_);
 
 			// acquire writable frame from nozzle
 			NozzleFrame *frame = nullptr;
 			NozzleErrorCode err = nozzle_sender_acquire_writable_frame(
-				sender_, w, h, NOZZLE_FORMAT_RGBA8_UNORM, &frame
+				sender_, w, h, jfmt.nozzle_fmt, &frame
 			);
 			if(err != NOZZLE_OK || !frame) {
 				cerr << "jit.nozzle.send: acquire failed (error " << err << ")" << endl;
@@ -163,8 +203,7 @@ private:
 			uint32_t src_row_bytes = matrix_row_bytes;
 			uint32_t dst_row_bytes = mapped.row_bytes;
 			uint32_t copy_bytes = std::min(src_row_bytes, dst_row_bytes);
-			// RGBA8 = 4 bytes per pixel, cap at w * 4
-			copy_bytes = std::min(copy_bytes, w * 4u);
+			copy_bytes = std::min(copy_bytes, w * jfmt.bytes_per_pixel);
 
 			auto *src = static_cast<const unsigned char *>(bp);
 			auto *dst = static_cast<unsigned char *>(mapped.data);
