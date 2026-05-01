@@ -1,5 +1,8 @@
 # jit.nozzle
 
+> This codebase is currently in its AI-slob prototyping phase: the code runs on momentum, vibes, and plausible intent.
+> Proper debugging will be introduced once demand graduates from hypothetical to measurable.
+
 Max/MSP externals for inter-process matrix sharing via [nozzle](https://github.com/nozzle-io/nozzle) — a cross-platform alternative to Syphon (macOS) and Spout (Windows).
 
 Shares jit.matrix and OpenGL texture data between processes on the same machine. Built as universal binary externals (x86_64 + arm64) using the [min-api](https://github.com/Cycling74/min-api).
@@ -109,3 +112,8 @@ Copy the `externals/` and `help/` folders into your Max packages directory, or d
 ## License
 
 MIT
+
+Third-party dependencies:
+
+- [nozzle](https://github.com/nozzle-io/nozzle) — MIT
+- [min-api](https://github.com/Cycling74/min-api) — MIT
