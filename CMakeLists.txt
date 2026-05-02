@@ -20,6 +20,11 @@ set(NOZZLE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(NOZZLE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/deps/nozzle)
 
+option(JIT_NOZZLE_DEBUG "Enable debug logging for jit.nozzle externals" OFF)
+if(JIT_NOZZLE_DEBUG)
+	add_compile_definitions(JIT_NOZZLE_DEBUG=1)
+endif()
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bbb_external.cmake)
 
 set(C74_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/externals)

@@ -131,7 +131,7 @@ private:
 	c74::max::t_symbol *matrix_name_{nullptr};
 	std::mutex mutex_;
 	uint64_t frame_count_{0};
-#if 0
+#if JIT_NOZZLE_DEBUG
 	int acquire_log_throttle_{0};
 #endif
 
@@ -150,8 +150,6 @@ private:
 
 		NozzleErrorCode err = nozzle_receiver_create(&desc, &receiver_);
 		if(err != NOZZLE_OK) {
-			cerr << "jit.nozzle.receive: failed to connect to '" << name
-			     << "' (error " << err << ")" << endl;
 			receiver_ = nullptr;
 		} else {
 			cout << "jit.nozzle.receive: connected to '" << name << "'" << endl;
@@ -176,7 +174,7 @@ private:
 		NozzleErrorCode err = nozzle_receiver_acquire_frame(receiver_, &acq, &frame);
 
 		if(err != NOZZLE_OK || !frame) {
-#if 0
+#if JIT_NOZZLE_DEBUG
 			if(acquire_log_throttle_ <= 0) {
 				NozzleConnectedSenderInfo dbg_info{};
 				NozzleErrorCode dbg_err = nozzle_receiver_get_connected_info(receiver_, &dbg_info);
@@ -195,7 +193,7 @@ private:
 #endif
 			return;
 		}
-#if 0
+#if JIT_NOZZLE_DEBUG
 		acquire_log_throttle_ = 0;
 #endif
 
@@ -288,14 +286,14 @@ private:
 
 		if(output_matrix_ && matrix_name_) {
 			matrix_out.send("jit_matrix", c74::min::symbol(matrix_name_->s_name));
-#if 0
+#if JIT_NOZZLE_DEBUG
 			cout << "DEBUG: acquire OK frame=" << finfo.frame_index
 			     << " w=" << finfo.width << " h=" << finfo.height
 			     << " has_data=" << has_data
 			     << " matrix=" << matrix_name_->s_name << endl;
 #endif
 		}
-#if 0
+#if JIT_NOZZLE_DEBUG
 		else {
 			cerr << "DEBUG: output_matrix_=" << (output_matrix_ ? "ok" : "null")
 			     << " matrix_name_=" << (matrix_name_ ? matrix_name_->s_name : "null") << endl;
