@@ -131,7 +131,9 @@ private:
 	c74::max::t_symbol *matrix_name_{nullptr};
 	std::mutex mutex_;
 	uint64_t frame_count_{0};
+#if 0
 	int acquire_log_throttle_{0};
+#endif
 
 	void setup_receiver(const std::string& name) {
 		if(name.empty()) return;
@@ -174,6 +176,7 @@ private:
 		NozzleErrorCode err = nozzle_receiver_acquire_frame(receiver_, &acq, &frame);
 
 		if(err != NOZZLE_OK || !frame) {
+#if 0
 			if(acquire_log_throttle_ <= 0) {
 				NozzleConnectedSenderInfo dbg_info{};
 				NozzleErrorCode dbg_err = nozzle_receiver_get_connected_info(receiver_, &dbg_info);
@@ -189,9 +192,12 @@ private:
 			} else {
 				acquire_log_throttle_--;
 			}
+#endif
 			return;
 		}
+#if 0
 		acquire_log_throttle_ = 0;
+#endif
 
 		NozzleFrameInfo finfo{};
 		nozzle_frame_get_info(frame, &finfo);
@@ -281,15 +287,20 @@ private:
 		frame_count_ = finfo.frame_index;
 
 		if(output_matrix_ && matrix_name_) {
+			matrix_out.send("jit_matrix", c74::min::symbol(matrix_name_->s_name));
+#if 0
 			cout << "DEBUG: acquire OK frame=" << finfo.frame_index
 			     << " w=" << finfo.width << " h=" << finfo.height
 			     << " has_data=" << has_data
 			     << " matrix=" << matrix_name_->s_name << endl;
-			matrix_out.send("jit_matrix", c74::min::symbol(matrix_name_->s_name));
-		} else {
+#endif
+		}
+#if 0
+		else {
 			cerr << "DEBUG: output_matrix_=" << (output_matrix_ ? "ok" : "null")
 			     << " matrix_name_=" << (matrix_name_ ? matrix_name_->s_name : "null") << endl;
 		}
+#endif
 	}
 };
 
