@@ -18,12 +18,20 @@ endif()
  # --- Build nozzle from source (skip tests/examples) ---
 set(NOZZLE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(NOZZLE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/deps/nozzle)
 
 option(JIT_NOZZLE_DEBUG "Enable debug logging for jit.nozzle externals" OFF)
+option(NOZZLE_DEBUG "Enable debug logging in nozzle library" OFF)
 if(JIT_NOZZLE_DEBUG)
 	add_compile_definitions(JIT_NOZZLE_DEBUG=1)
 endif()
+if(NOZZLE_DEBUG)
+	add_compile_definitions(NOZZLE_DEBUG=1)
+endif()
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/deps/nozzle)
+
+# Prevent nozzle's own option() from adding duplicate definitions
+set(NOZZLE_DEBUG OFF CACHE BOOL "" FORCE)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bbb_external.cmake)
 
