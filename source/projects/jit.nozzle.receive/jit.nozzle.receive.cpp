@@ -281,10 +281,22 @@ private:
 				uint32_t dst_row_bytes = static_cast<uint32_t>(out_info.dimstride[1]);
 				uint32_t copy_bytes = std::min(src_row_bytes, dst_row_bytes);
 				copy_bytes = std::min(copy_bytes, w * jfmt.bytes_per_pixel);
+				bool need_rgba_swizzle = (out_info.type == _jit_sym_char && out_info.planecount == 4);
 
 				auto *src = static_cast<const unsigned char *>(mapped.data);
 				for(uint32_t y = 0; y < h; y++) {
-					std::memcpy(out_bp + y * dst_row_bytes, src + y * src_row_bytes, copy_bytes);
+					const unsigned char *src_row = src + y * src_row_bytes;
+					unsigned char *dst_row = out_bp + y * dst_row_bytes;
+					if(need_rgba_swizzle) {
+						for(uint32_t x = 0; x < w; x++) {
+							dst_row[x * 4 + 0] = src_row[x * 4 + 3];
+							dst_row[x * 4 + 1] = src_row[x * 4 + 0];
+							dst_row[x * 4 + 2] = src_row[x * 4 + 1];
+							dst_row[x * 4 + 3] = src_row[x * 4 + 2];
+						}
+					} else {
+						std::memcpy(dst_row, src_row, copy_bytes);
+					}
 				}
 			}
 
