@@ -133,7 +133,8 @@ private:
 	uint64_t frame_count_{0};
 	bool last_connect_failed_{false};
 #if JIT_NOZZLE_DEBUG
-	int acquire_log_throttle_{0};
+	int consecutive_errors_{0};
+	int error_log_cooldown_{0};
 #endif
 
 	void setup_receiver(const std::string& name) {
@@ -182,26 +183,30 @@ private:
 
 		if(err != NOZZLE_OK || !frame) {
 #if JIT_NOZZLE_DEBUG
-			if(acquire_log_throttle_ <= 0) {
+			consecutive_errors_++;
+			if(consecutive_errors_ >= 5 && error_log_cooldown_ <= 0) {
 				NozzleConnectedSenderInfo dbg_info{};
 				NozzleErrorCode dbg_err = nozzle_receiver_get_connected_info(receiver_, &dbg_info);
 				if(dbg_err == NOZZLE_OK) {
 					cerr << "jit.nozzle.receive: acquire error " << err
+					     << " (x" << consecutive_errors_ << ")"
 					     << " sender_frames=" << dbg_info.frame_counter
 					     << " size=" << dbg_info.width << "x" << dbg_info.height << endl;
 				} else {
 					cerr << "jit.nozzle.receive: acquire error " << err
+					     << " (x" << consecutive_errors_ << ")"
 					     << " get_info also failed (" << dbg_err << ")" << endl;
 				}
-				acquire_log_throttle_ = 30;
-			} else {
-				acquire_log_throttle_--;
+				error_log_cooldown_ = 30;
+			} else if(error_log_cooldown_ > 0) {
+				error_log_cooldown_--;
 			}
 #endif
 			return;
 		}
 #if JIT_NOZZLE_DEBUG
-		acquire_log_throttle_ = 0;
+		consecutive_errors_ = 0;
+		error_log_cooldown_ = 0;
 #endif
 
 		NozzleFrameInfo finfo{};
