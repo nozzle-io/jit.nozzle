@@ -25,10 +25,14 @@ if(JIT_NOZZLE_DEBUG)
 	add_compile_definitions(JIT_NOZZLE_DEBUG=1)
 endif()
 if(NOZZLE_DEBUG)
-	set(NOZZLE_DEBUG ON CACHE BOOL "" FORCE)
+	set(NOZZLE_DEBUG ON CACHE BOOL "Enable debug logging" FORCE)
 endif()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/deps/nozzle)
+
+if(NOZZLE_DEBUG)
+	target_compile_definitions(nozzle PRIVATE NOZZLE_DEBUG=1)
+endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bbb_external.cmake)
 
