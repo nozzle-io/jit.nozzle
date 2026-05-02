@@ -25,13 +25,10 @@ if(JIT_NOZZLE_DEBUG)
 	add_compile_definitions(JIT_NOZZLE_DEBUG=1)
 endif()
 if(NOZZLE_DEBUG)
-	add_compile_definitions(NOZZLE_DEBUG=1)
+	set(NOZZLE_DEBUG ON CACHE BOOL "" FORCE)
 endif()
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/deps/nozzle)
-
-# Prevent nozzle's own option() from adding duplicate definitions
-set(NOZZLE_DEBUG OFF CACHE BOOL "" FORCE)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bbb_external.cmake)
 
