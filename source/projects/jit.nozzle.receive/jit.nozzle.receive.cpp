@@ -131,6 +131,7 @@ private:
 	c74::max::t_symbol *matrix_name_{nullptr};
 	std::mutex mutex_;
 	uint64_t frame_count_{0};
+	bool last_connect_failed_{false};
 #if JIT_NOZZLE_DEBUG
 	int acquire_log_throttle_{0};
 #endif
@@ -150,8 +151,14 @@ private:
 
 		NozzleErrorCode err = nozzle_receiver_create(&desc, &receiver_);
 		if(err != NOZZLE_OK) {
+			if(!last_connect_failed_) {
+				cerr << "jit.nozzle.receive: failed to connect to '" << name
+				     << "' (error " << err << ")" << endl;
+				last_connect_failed_ = true;
+			}
 			receiver_ = nullptr;
 		} else {
+			last_connect_failed_ = false;
 			cout << "jit.nozzle.receive: connected to '" << name << "'" << endl;
 		}
 	}
