@@ -298,9 +298,13 @@ private:
 						permute_map[2] = 1; permute_map[3] = 2;
 					}
 
-					NozzleTextureFormat swiz_fmt = NOZZLE_FORMAT_RGBA8_UNORM;
+					NozzleTextureFormat swiz_fmt;
 					if (pixel_bytes == 16) {
 						swiz_fmt = NOZZLE_FORMAT_RGBA32_FLOAT;
+					} else if (is_bgra) {
+						swiz_fmt = NOZZLE_FORMAT_BGRA8_UNORM;
+					} else {
+						swiz_fmt = NOZZLE_FORMAT_RGBA8_UNORM;
 					}
 
 					uint32_t src_row_bytes = static_cast<uint32_t>(src_stride < 0 ? -src_stride : src_stride);

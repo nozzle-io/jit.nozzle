@@ -221,9 +221,13 @@ private:
 					permute_map[2] = 3; permute_map[3] = 0;
 				}
 
-				NozzleTextureFormat swiz_fmt = NOZZLE_FORMAT_RGBA8_UNORM;
+				NozzleTextureFormat swiz_fmt;
 				if (pixel_bytes == 16) {
 					swiz_fmt = NOZZLE_FORMAT_RGBA32_FLOAT;
+				} else if (is_bgra) {
+					swiz_fmt = NOZZLE_FORMAT_BGRA8_UNORM;
+				} else {
+					swiz_fmt = NOZZLE_FORMAT_RGBA8_UNORM;
 				}
 
 				nozzle_swizzle_channels(
