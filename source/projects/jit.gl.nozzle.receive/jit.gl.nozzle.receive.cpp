@@ -111,6 +111,7 @@ private:
 	uint64_t frame_count_{0};
 	uint32_t last_width_{0};
 	uint32_t last_height_{0};
+	bool last_connect_failed_{false};
 
 	void setup_receiver(const std::string& name) {
 		if(name.empty()) return;
@@ -122,10 +123,14 @@ private:
 
 		NozzleErrorCode err = nozzle_receiver_create(&desc, &receiver_);
 		if(err != NOZZLE_OK) {
-			cerr << "jit.gl.nozzle.receive: failed to connect to '" << name
-			     << "' (error " << err << ")" << endl;
+			if(!last_connect_failed_) {
+				cerr << "jit.gl.nozzle.receive: failed to connect to '" << name
+				     << "' (error " << err << ")" << endl;
+				last_connect_failed_ = true;
+			}
 			receiver_ = nullptr;
 		} else {
+			last_connect_failed_ = false;
 			cout << "jit.gl.nozzle.receive: connected to '" << name << "'" << endl;
 		}
 	}
