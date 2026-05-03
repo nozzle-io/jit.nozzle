@@ -282,21 +282,30 @@ private:
 				uint32_t copy_bytes = std::min(static_cast<uint32_t>(src_stride < 0 ? -src_stride : src_stride), dst_row_bytes);
 				copy_bytes = std::min(copy_bytes, w * jfmt.bytes_per_pixel);
 				uint32_t pixel_bytes = jfmt.bytes_per_pixel;
-				bool need_rgba_swizzle = (out_info.planecount == 4);
+				bool need_swizzle = (out_info.planecount == 4);
+				bool is_bgra = (finfo.format == NOZZLE_FORMAT_BGRA8_UNORM ||
+				                finfo.format == NOZZLE_FORMAT_BGRA8_SRGB);
 
 				auto *src = static_cast<const unsigned char *>(mapped.data);
 				for(uint32_t y = 0; y < h; y++) {
 					const unsigned char *src_row = src + static_cast<int64_t>(y) * src_stride;
 					unsigned char *dst_row = out_bp + y * dst_row_bytes;
-					if(need_rgba_swizzle) {
+					if(need_swizzle) {
 						for(uint32_t x = 0; x < w; x++) {
 							const unsigned char *sp = src_row + x * pixel_bytes;
 							unsigned char *dp = dst_row + x * pixel_bytes;
 							uint32_t cs = pixel_bytes / 4;
-							std::memcpy(dp + 0 * cs, sp + 3 * cs, cs);
-							std::memcpy(dp + 1 * cs, sp + 0 * cs, cs);
-							std::memcpy(dp + 2 * cs, sp + 1 * cs, cs);
-							std::memcpy(dp + 3 * cs, sp + 2 * cs, cs);
+							if(is_bgra) {
+								std::memcpy(dp + 0 * cs, sp + 3 * cs, cs); // A
+								std::memcpy(dp + 1 * cs, sp + 2 * cs, cs); // R
+								std::memcpy(dp + 2 * cs, sp + 1 * cs, cs); // G
+								std::memcpy(dp + 3 * cs, sp + 0 * cs, cs); // B
+							} else {
+								std::memcpy(dp + 0 * cs, sp + 3 * cs, cs); // A
+								std::memcpy(dp + 1 * cs, sp + 0 * cs, cs); // R
+								std::memcpy(dp + 2 * cs, sp + 1 * cs, cs); // G
+								std::memcpy(dp + 3 * cs, sp + 2 * cs, cs); // B
+							}
 						}
 					} else {
 						std::memcpy(dst_row, src_row, copy_bytes);
