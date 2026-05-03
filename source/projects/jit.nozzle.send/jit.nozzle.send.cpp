@@ -205,7 +205,8 @@ private:
 
 				auto *src = static_cast<const unsigned char *>(bp);
 			auto *dst = static_cast<unsigned char *>(mapped.data);
-			bool need_argb_swizzle = (minfo.planecount == 4);
+			bool is_swizzle_type = (minfo.type == _jit_sym_char || minfo.type == _jit_sym_float32);
+			bool need_argb_swizzle = (minfo.planecount == 4 && is_swizzle_type);
 			uint32_t pixel_bytes = jfmt.bytes_per_pixel;
 			uint32_t copy_bytes = std::min(matrix_row_bytes, w * pixel_bytes);
 
@@ -230,10 +231,17 @@ private:
 					swiz_fmt = NOZZLE_FORMAT_RGBA8_UNORM;
 				}
 
-				nozzle_swizzle_channels(
+				NozzleErrorCode swiz_err = nozzle_swizzle_channels(
 					src, dst, w, h,
 					matrix_row_bytes, static_cast<uint32_t>(mapped.row_stride_bytes),
 					swiz_fmt, permute_map);
+				if (swiz_err != NOZZLE_OK) {
+					cerr << "jit.nozzle.send: swizzle failed (error " << swiz_err << ")" << endl;
+					nozzle_frame_unlock_writable_pixels(frame);
+					nozzle_frame_release(frame);
+					jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+					return;
+				}
 			} else {
 				for(uint32_t y = 0; y < h; y++) {
 					const unsigned char *src_row = src + y * matrix_row_bytes;

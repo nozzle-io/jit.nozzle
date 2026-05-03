@@ -282,7 +282,12 @@ private:
 				uint32_t copy_bytes = std::min(static_cast<uint32_t>(src_stride < 0 ? -src_stride : src_stride), dst_row_bytes);
 				copy_bytes = std::min(copy_bytes, w * jfmt.bytes_per_pixel);
 				uint32_t pixel_bytes = jfmt.bytes_per_pixel;
-				bool need_swizzle = (out_info.planecount == 4);
+				bool is_swizzle_format = (finfo.format == NOZZLE_FORMAT_RGBA8_UNORM ||
+				                         finfo.format == NOZZLE_FORMAT_BGRA8_UNORM ||
+				                         finfo.format == NOZZLE_FORMAT_RGBA8_SRGB ||
+				                         finfo.format == NOZZLE_FORMAT_BGRA8_SRGB ||
+				                         finfo.format == NOZZLE_FORMAT_RGBA32_FLOAT);
+				bool need_swizzle = (out_info.planecount == 4 && is_swizzle_format);
 
 				auto *src = static_cast<const unsigned char *>(mapped.data);
 
@@ -308,10 +313,17 @@ private:
 					}
 
 					uint32_t src_row_bytes = static_cast<uint32_t>(src_stride < 0 ? -src_stride : src_stride);
-					nozzle_swizzle_channels(
+					NozzleErrorCode swiz_err = nozzle_swizzle_channels(
 						src, out_bp, w, h,
 						src_row_bytes, dst_row_bytes,
 						swiz_fmt, permute_map);
+					if (swiz_err != NOZZLE_OK) {
+						cerr << "jit.nozzle.receive: swizzle failed (error " << swiz_err << ")" << endl;
+						jit_object_method(output_matrix_, _jit_sym_lock, out_savelock);
+						nozzle_frame_unlock_pixels(frame);
+						nozzle_frame_release(frame);
+						return;
+					}
 				} else {
 					for(uint32_t y = 0; y < h; y++) {
 						const unsigned char *src_row = src + static_cast<int64_t>(y) * src_stride;
