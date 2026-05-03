@@ -283,31 +283,35 @@ private:
 				copy_bytes = std::min(copy_bytes, w * jfmt.bytes_per_pixel);
 				uint32_t pixel_bytes = jfmt.bytes_per_pixel;
 				bool need_swizzle = (out_info.planecount == 4);
-				bool is_bgra = (finfo.format == NOZZLE_FORMAT_BGRA8_UNORM ||
-				                finfo.format == NOZZLE_FORMAT_BGRA8_SRGB);
 
 				auto *src = static_cast<const unsigned char *>(mapped.data);
-				for(uint32_t y = 0; y < h; y++) {
-					const unsigned char *src_row = src + static_cast<int64_t>(y) * src_stride;
-					unsigned char *dst_row = out_bp + y * dst_row_bytes;
-					if(need_swizzle) {
-						for(uint32_t x = 0; x < w; x++) {
-							const unsigned char *sp = src_row + x * pixel_bytes;
-							unsigned char *dp = dst_row + x * pixel_bytes;
-							uint32_t cs = pixel_bytes / 4;
-							if(is_bgra) {
-								std::memcpy(dp + 0 * cs, sp + 3 * cs, cs); // A
-								std::memcpy(dp + 1 * cs, sp + 2 * cs, cs); // R
-								std::memcpy(dp + 2 * cs, sp + 1 * cs, cs); // G
-								std::memcpy(dp + 3 * cs, sp + 0 * cs, cs); // B
-							} else {
-								std::memcpy(dp + 0 * cs, sp + 3 * cs, cs); // A
-								std::memcpy(dp + 1 * cs, sp + 0 * cs, cs); // R
-								std::memcpy(dp + 2 * cs, sp + 1 * cs, cs); // G
-								std::memcpy(dp + 3 * cs, sp + 2 * cs, cs); // B
-							}
-						}
+
+				if (need_swizzle) {
+					bool is_bgra = (finfo.format == NOZZLE_FORMAT_BGRA8_UNORM ||
+					                finfo.format == NOZZLE_FORMAT_BGRA8_SRGB);
+					uint8_t permute_map[4];
+					if (is_bgra) {
+						permute_map[0] = 3; permute_map[1] = 2;
+						permute_map[2] = 1; permute_map[3] = 0;
 					} else {
+						permute_map[0] = 3; permute_map[1] = 0;
+						permute_map[2] = 1; permute_map[3] = 2;
+					}
+
+					NozzleTextureFormat swiz_fmt = NOZZLE_FORMAT_RGBA8_UNORM;
+					if (pixel_bytes == 16) {
+						swiz_fmt = NOZZLE_FORMAT_RGBA32_FLOAT;
+					}
+
+					uint32_t src_row_bytes = static_cast<uint32_t>(src_stride < 0 ? -src_stride : src_stride);
+					nozzle_swizzle_channels(
+						src, out_bp, w, h,
+						src_row_bytes, dst_row_bytes,
+						swiz_fmt, permute_map);
+				} else {
+					for(uint32_t y = 0; y < h; y++) {
+						const unsigned char *src_row = src + static_cast<int64_t>(y) * src_stride;
+						unsigned char *dst_row = out_bp + y * dst_row_bytes;
 						std::memcpy(dst_row, src_row, copy_bytes);
 					}
 				}

@@ -209,32 +209,31 @@ private:
 			uint32_t pixel_bytes = jfmt.bytes_per_pixel;
 			uint32_t copy_bytes = std::min(matrix_row_bytes, w * pixel_bytes);
 
-			bool is_bgra = (mapped.format == NOZZLE_FORMAT_BGRA8_UNORM ||
-			                mapped.format == NOZZLE_FORMAT_BGRA8_SRGB);
-
-			for(uint32_t y = 0; y < h; y++) {
-				const unsigned char *src_row = src + y * matrix_row_bytes;
-				unsigned char *dst_row = dst + static_cast<int64_t>(y) * mapped.row_stride_bytes;
-				if(need_argb_swizzle) {
-					for(uint32_t x = 0; x < w; x++) {
-						const unsigned char *sp = src_row + x * pixel_bytes;
-						unsigned char *dp = dst_row + x * pixel_bytes;
-						uint32_t cs = pixel_bytes / 4;
-						if(is_bgra) {
-							// ARGB → BGRA: B=sp[3], G=sp[2], R=sp[1], A=sp[0]
-							std::memcpy(dp + 0 * cs, sp + 3 * cs, cs); // B
-							std::memcpy(dp + 1 * cs, sp + 2 * cs, cs); // G
-							std::memcpy(dp + 2 * cs, sp + 1 * cs, cs); // R
-							std::memcpy(dp + 3 * cs, sp + 0, cs);      // A
-						} else {
-							// ARGB → RGBA: R=sp[1], G=sp[2], B=sp[3], A=sp[0]
-							std::memcpy(dp + 0 * cs, sp + 1 * cs, cs); // R
-							std::memcpy(dp + 1 * cs, sp + 2 * cs, cs); // G
-							std::memcpy(dp + 2 * cs, sp + 3 * cs, cs); // B
-							std::memcpy(dp + 3 * cs, sp + 0, cs);      // A
-						}
-					}
+			if (need_argb_swizzle) {
+				bool is_bgra = (mapped.format == NOZZLE_FORMAT_BGRA8_UNORM ||
+				                mapped.format == NOZZLE_FORMAT_BGRA8_SRGB);
+				uint8_t permute_map[4];
+				if (is_bgra) {
+					permute_map[0] = 3; permute_map[1] = 2;
+					permute_map[2] = 1; permute_map[3] = 0;
 				} else {
+					permute_map[0] = 1; permute_map[1] = 2;
+					permute_map[2] = 3; permute_map[3] = 0;
+				}
+
+				NozzleTextureFormat swiz_fmt = NOZZLE_FORMAT_RGBA8_UNORM;
+				if (pixel_bytes == 16) {
+					swiz_fmt = NOZZLE_FORMAT_RGBA32_FLOAT;
+				}
+
+				nozzle_swizzle_channels(
+					src, dst, w, h,
+					matrix_row_bytes, static_cast<uint32_t>(mapped.row_stride_bytes),
+					swiz_fmt, permute_map);
+			} else {
+				for(uint32_t y = 0; y < h; y++) {
+					const unsigned char *src_row = src + y * matrix_row_bytes;
+					unsigned char *dst_row = dst + static_cast<int64_t>(y) * mapped.row_stride_bytes;
 					std::memcpy(dst_row, src_row, copy_bytes);
 				}
 			}
