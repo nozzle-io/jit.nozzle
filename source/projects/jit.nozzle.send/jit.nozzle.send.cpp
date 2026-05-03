@@ -211,10 +211,6 @@ private:
 
 			bool is_bgra = (mapped.format == NOZZLE_FORMAT_BGRA8_UNORM ||
 			                mapped.format == NOZZLE_FORMAT_BGRA8_SRGB);
-			cerr << "jit.nozzle.send DEBUG: mapped.format=" << mapped.format
-			     << " is_bgra=" << is_bgra
-			     << " pixel_bytes=" << pixel_bytes
-			     << " planecount=" << minfo.planecount << endl;
 
 			for(uint32_t y = 0; y < h; y++) {
 				const unsigned char *src_row = src + y * matrix_row_bytes;
