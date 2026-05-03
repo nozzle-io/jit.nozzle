@@ -194,7 +194,8 @@ private:
 
 			// lock writable pixels on nozzle frame
 			NozzleMappedPixels mapped{};
-			err = nozzle_frame_lock_writable_pixels(frame, &mapped);
+			err = nozzle_frame_lock_writable_pixels_with_origin(
+				frame, NOZZLE_ORIGIN_TOP_LEFT, &mapped);
 			if(err != NOZZLE_OK) {
 				cerr << "jit.nozzle.send: lock writable pixels failed (error " << err << ")" << endl;
 				nozzle_frame_release(frame);
@@ -205,13 +206,12 @@ private:
 				auto *src = static_cast<const unsigned char *>(bp);
 			auto *dst = static_cast<unsigned char *>(mapped.data);
 			bool need_argb_swizzle = (minfo.planecount == 4);
-			uint32_t copy_bytes = std::min(matrix_row_bytes, mapped.row_bytes);
-			copy_bytes = std::min(copy_bytes, w * jfmt.bytes_per_pixel);
 			uint32_t pixel_bytes = jfmt.bytes_per_pixel;
+			uint32_t copy_bytes = std::min(matrix_row_bytes, w * pixel_bytes);
 
 			for(uint32_t y = 0; y < h; y++) {
 				const unsigned char *src_row = src + y * matrix_row_bytes;
-				unsigned char *dst_row = dst + y * mapped.row_bytes;
+				unsigned char *dst_row = dst + static_cast<int64_t>(y) * mapped.row_stride_bytes;
 				if(need_argb_swizzle) {
 					for(uint32_t x = 0; x < w; x++) {
 						const unsigned char *sp = src_row + x * pixel_bytes;

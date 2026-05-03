@@ -217,7 +217,7 @@ private:
 		auto jfmt = nozzle_to_jitter_format(finfo.format);
 
 		NozzleMappedPixels mapped{};
-		err = nozzle_frame_lock_pixels(frame, &mapped);
+		err = nozzle_frame_lock_pixels_with_origin(frame, NOZZLE_ORIGIN_TOP_LEFT, &mapped);
 		if(err != NOZZLE_OK) {
 			cerr << "jit.nozzle.receive: lock pixels failed (error " << err << ")" << endl;
 			nozzle_frame_release(frame);
@@ -277,16 +277,16 @@ private:
 				has_data = true;
 				t_jit_matrix_info out_info{};
 				jit_object_method(output_matrix_, _jit_sym_getinfo, &out_info);
-				uint32_t src_row_bytes = mapped.row_bytes;
+				int64_t src_stride = mapped.row_stride_bytes;
 				uint32_t dst_row_bytes = static_cast<uint32_t>(out_info.dimstride[1]);
-				uint32_t copy_bytes = std::min(src_row_bytes, dst_row_bytes);
+				uint32_t copy_bytes = std::min(static_cast<uint32_t>(src_stride < 0 ? -src_stride : src_stride), dst_row_bytes);
 				copy_bytes = std::min(copy_bytes, w * jfmt.bytes_per_pixel);
 				uint32_t pixel_bytes = jfmt.bytes_per_pixel;
 				bool need_rgba_swizzle = (out_info.planecount == 4);
 
 				auto *src = static_cast<const unsigned char *>(mapped.data);
 				for(uint32_t y = 0; y < h; y++) {
-					const unsigned char *src_row = src + y * src_row_bytes;
+					const unsigned char *src_row = src + static_cast<int64_t>(y) * src_stride;
 					unsigned char *dst_row = out_bp + y * dst_row_bytes;
 					if(need_rgba_swizzle) {
 						for(uint32_t x = 0; x < w; x++) {
