@@ -209,6 +209,9 @@ private:
 			uint32_t pixel_bytes = jfmt.bytes_per_pixel;
 			uint32_t copy_bytes = std::min(matrix_row_bytes, w * pixel_bytes);
 
+			bool is_bgra = (jfmt.nozzle_fmt == NOZZLE_FORMAT_BGRA8_UNORM ||
+			                jfmt.nozzle_fmt == NOZZLE_FORMAT_BGRA8_SRGB);
+
 			for(uint32_t y = 0; y < h; y++) {
 				const unsigned char *src_row = src + y * matrix_row_bytes;
 				unsigned char *dst_row = dst + static_cast<int64_t>(y) * mapped.row_stride_bytes;
@@ -216,10 +219,20 @@ private:
 					for(uint32_t x = 0; x < w; x++) {
 						const unsigned char *sp = src_row + x * pixel_bytes;
 						unsigned char *dp = dst_row + x * pixel_bytes;
-						std::memcpy(dp + 0, sp + 1 * (pixel_bytes / 4), pixel_bytes / 4);
-						std::memcpy(dp + 1 * (pixel_bytes / 4), sp + 2 * (pixel_bytes / 4), pixel_bytes / 4);
-						std::memcpy(dp + 2 * (pixel_bytes / 4), sp + 3 * (pixel_bytes / 4), pixel_bytes / 4);
-						std::memcpy(dp + 3 * (pixel_bytes / 4), sp + 0, pixel_bytes / 4);
+						uint32_t cs = pixel_bytes / 4;
+						if(is_bgra) {
+							// ARGB → BGRA: B=sp[3], G=sp[2], R=sp[1], A=sp[0]
+							std::memcpy(dp + 0 * cs, sp + 3 * cs, cs); // B
+							std::memcpy(dp + 1 * cs, sp + 2 * cs, cs); // G
+							std::memcpy(dp + 2 * cs, sp + 1 * cs, cs); // R
+							std::memcpy(dp + 3 * cs, sp + 0, cs);      // A
+						} else {
+							// ARGB → RGBA: R=sp[1], G=sp[2], B=sp[3], A=sp[0]
+							std::memcpy(dp + 0 * cs, sp + 1 * cs, cs); // R
+							std::memcpy(dp + 1 * cs, sp + 2 * cs, cs); // G
+							std::memcpy(dp + 2 * cs, sp + 3 * cs, cs); // B
+							std::memcpy(dp + 3 * cs, sp + 0, cs);      // A
+						}
 					}
 				} else {
 					std::memcpy(dst_row, src_row, copy_bytes);
