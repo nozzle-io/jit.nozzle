@@ -209,8 +209,15 @@ private:
 			uint32_t pixel_bytes = jfmt.bytes_per_pixel;
 			uint32_t copy_bytes = std::min(matrix_row_bytes, w * pixel_bytes);
 
-			bool is_bgra = (jfmt.nozzle_fmt == NOZZLE_FORMAT_BGRA8_UNORM ||
-			                jfmt.nozzle_fmt == NOZZLE_FORMAT_BGRA8_SRGB);
+			bool is_bgra = (pixel_bytes == 4 && minfo.type == _jit_sym_char
+ #if NOZZLE_PLATFORM_MACOS
+			                // macOS IOSurface normalizes all 8-bit 4-channel to BGRA8
+			                && true
+#else
+			                && (jfmt.nozzle_fmt == NOZZLE_FORMAT_BGRA8_UNORM ||
+			                    jfmt.nozzle_fmt == NOZZLE_FORMAT_BGRA8_SRGB)
+#endif
+			);
 
 			for(uint32_t y = 0; y < h; y++) {
 				const unsigned char *src_row = src + y * matrix_row_bytes;
