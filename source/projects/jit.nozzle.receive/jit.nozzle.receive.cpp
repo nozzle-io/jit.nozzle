@@ -45,6 +45,7 @@ static jitter_format_info nozzle_to_jitter_format(NozzleTextureFormat fmt) {
 		case NOZZLE_FORMAT_RGBA16_UNORM:return {_jit_sym_long, 4, 8};
 		case NOZZLE_FORMAT_R32_UINT:    return {_jit_sym_long, 1, 4};
 		case NOZZLE_FORMAT_RGBA32_UINT: return {_jit_sym_long, 4, 16};
+		case NOZZLE_FORMAT_DEPTH32_FLOAT: return {_jit_sym_float32, 1, 4};
 		default:                        return {_jit_sym_char, 4, 4};
 	}
 }
