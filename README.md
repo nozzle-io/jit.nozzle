@@ -112,7 +112,21 @@ Nozzle format is mapped back to Jitter matrix type as follows:
 
 ### jit.gl.nozzle.send/receive
 
-GL externals always use RGBA8_UNORM format. No format selection is available.
+GL externals automatically detect and preserve the source texture's format.
+
+**Sender**: queries the GL texture's internal format via `glGetTexLevelParameteriv(GL_TEXTURE_INTERNAL_FORMAT)` and maps it to the corresponding nozzle format. Supports R8, RG8, RGBA8, BGRA8, SRGB8_ALPHA8, R16F, RG16F, RGBA16F, R32F, RG32F, RGBA32F, R16, RG16, RGBA16, R32UI, RGBA32UI, and DEPTH_COMPONENT32F. Unknown formats fall back to RGBA8_UNORM.
+
+**Receiver**: reads the frame's nozzle format from `NozzleFrameInfo.format` and passes the appropriate format to `nozzle_frame_copy_to_gl_texture`. Unsupported nozzle formats (sRGB, uint, depth, 16-bit unorm) are mapped to the nearest compatible GL format:
+
+| Frame Format | Copy Format | Notes |
+|---|---|---|
+| All 8-bit unorm | Same format | Direct |
+| All 16-bit float | Same format | Direct |
+| All 32-bit float | Same format | Direct |
+| sRGB variants | Corresponding unorm | sRGB→linear handled by GL |
+| 16-bit unorm | 16-bit float | Precision preserved, semantic change |
+| uint | 32-bit float | Same byte layout, semantic change |
+| depth32_float | R32 float | Single channel |
 
 ## Build
 
@@ -145,8 +159,8 @@ The externals use nozzle's C ABI (`nozzle_c.h`) to avoid exception/RTTI conflict
 ```
 jit.nozzle.send:   jit_matrix → lock_pixels → memcpy to IOSurface → commit_frame
 jit.nozzle.receive: acquire_frame → lock_pixels → memcpy to jit.matrix → output
-jit.gl.nozzle.send:   jit_gl_texture → get GL name → nozzle_sender_publish_gl_texture
-jit.gl.nozzle.receive: acquire_frame → nozzle_frame_copy_to_gl_texture → output jit_gl_texture
+jit.gl.nozzle.send:   jit_gl_texture → get GL name → query internal format → nozzle_sender_publish_gl_texture
+jit.gl.nozzle.receive: acquire_frame → get frame format → nozzle_frame_copy_to_gl_texture → output jit_gl_texture
 ```
 
 ## Installation

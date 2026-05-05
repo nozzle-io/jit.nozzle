@@ -4,6 +4,12 @@ extern "C" {
 #include <nozzle/nozzle_c.h>
 }
 
+#ifdef __APPLE__
+#include <OpenGL/gl3.h>
+#else
+#include <GL/gl.h>
+#endif
+
 #include <mutex>
 #include <string>
 
@@ -16,6 +22,40 @@ static std::string to_string(const symbol &s) {
 static std::string attr_to_string(const attribute<symbol> &a) {
 	const symbol &s = a;
 	return to_string(s);
+}
+
+static NozzleTextureFormat nozzle_format_for_gl_copy(NozzleTextureFormat frame_format) {
+	switch (frame_format) {
+		case NOZZLE_FORMAT_R8_UNORM:
+		case NOZZLE_FORMAT_RG8_UNORM:
+		case NOZZLE_FORMAT_RGBA8_UNORM:
+		case NOZZLE_FORMAT_BGRA8_UNORM:
+		case NOZZLE_FORMAT_R16_FLOAT:
+		case NOZZLE_FORMAT_RG16_FLOAT:
+		case NOZZLE_FORMAT_RGBA16_FLOAT:
+		case NOZZLE_FORMAT_R32_FLOAT:
+		case NOZZLE_FORMAT_RG32_FLOAT:
+		case NOZZLE_FORMAT_RGBA32_FLOAT:
+			return frame_format;
+		case NOZZLE_FORMAT_RGBA8_SRGB:
+			return NOZZLE_FORMAT_RGBA8_UNORM;
+		case NOZZLE_FORMAT_BGRA8_SRGB:
+			return NOZZLE_FORMAT_BGRA8_UNORM;
+		case NOZZLE_FORMAT_R16_UNORM:
+			return NOZZLE_FORMAT_R16_FLOAT;
+		case NOZZLE_FORMAT_RG16_UNORM:
+			return NOZZLE_FORMAT_RG16_FLOAT;
+		case NOZZLE_FORMAT_RGBA16_UNORM:
+			return NOZZLE_FORMAT_RGBA16_FLOAT;
+		case NOZZLE_FORMAT_R32_UINT:
+			return NOZZLE_FORMAT_R32_FLOAT;
+		case NOZZLE_FORMAT_RGBA32_UINT:
+			return NOZZLE_FORMAT_RGBA32_FLOAT;
+		case NOZZLE_FORMAT_DEPTH32_FLOAT:
+			return NOZZLE_FORMAT_R32_FLOAT;
+		default:
+			return NOZZLE_FORMAT_RGBA8_UNORM;
+	}
 }
 
 class jit_gl_nozzle_receive : public object<jit_gl_nozzle_receive> {
@@ -223,13 +263,15 @@ private:
 				return;
 			}
 
+			NozzleTextureFormat copy_format = nozzle_format_for_gl_copy(finfo.format);
+
 			err = nozzle_frame_copy_to_gl_texture(
 				frame,
 				static_cast<uint32_t>(gl_id),
 				0x0DE1,  // GL_TEXTURE_2D
 				w,
 				h,
-				NOZZLE_FORMAT_RGBA8_UNORM
+				copy_format
 			);
 
 			if(err != NOZZLE_OK) {
