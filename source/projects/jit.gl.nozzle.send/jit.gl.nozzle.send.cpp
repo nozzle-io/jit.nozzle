@@ -7,6 +7,61 @@ extern "C" {
 #ifdef __APPLE__
 #include <OpenGL/gl3.h>
 #else
+// Windows <GL/gl.h> only covers OpenGL 1.1; define modern constants directly.
+#ifndef GL_R8
+#define GL_R8 0x8229
+#endif
+#ifndef GL_RG8
+#define GL_RG8 0x822B
+#endif
+#ifndef GL_RGBA8
+#define GL_RGBA8 0x8058
+#endif
+#ifndef GL_BGRA8_EXT
+#define GL_BGRA8_EXT 0x93A1
+#endif
+#ifndef GL_SRGB8_ALPHA8
+#define GL_SRGB8_ALPHA8 0x8C43
+#endif
+#ifndef GL_R16F
+#define GL_R16F 0x822D
+#endif
+#ifndef GL_RG16F
+#define GL_RG16F 0x822F
+#endif
+#ifndef GL_RGBA16F
+#define GL_RGBA16F 0x881A
+#endif
+#ifndef GL_R32F
+#define GL_R32F 0x822E
+#endif
+#ifndef GL_RG32F
+#define GL_RG32F 0x8230
+#endif
+#ifndef GL_RGBA32F
+#define GL_RGBA32F 0x8814
+#endif
+#ifndef GL_R16
+#define GL_R16 0x822A
+#endif
+#ifndef GL_RG16
+#define GL_RG16 0x822C
+#endif
+#ifndef GL_RGBA16
+#define GL_RGBA16 0x805B
+#endif
+#ifndef GL_R32UI
+#define GL_R32UI 0x8236
+#endif
+#ifndef GL_RGBA32UI
+#define GL_RGBA32UI 0x8D70
+#endif
+#ifndef GL_DEPTH_COMPONENT32F
+#define GL_DEPTH_COMPONENT32F 0x8CAC
+#endif
+#ifndef GL_TEXTURE_INTERNAL_FORMAT
+#define GL_TEXTURE_INTERNAL_FORMAT 0x1003
+#endif
 #include <GL/gl.h>
 #endif
 
