@@ -78,6 +78,42 @@ Receives GL texture data from a named sender. Outputs `jit_gl_texture` on the le
 | `connect` | Reconnect to sender |
 | `info` | Print connected sender info to console |
 
+## Matrix Format Support
+
+### jit.nozzle.send (Sender)
+
+Jitter matrix type and planecount are mapped to nozzle format as follows:
+
+| Matrix Type | Planes | Nozzle Format |
+|-------------|--------|---------------|
+| char | 1 | R8 UNORM |
+| char | 2 | RG8 UNORM |
+| char | 3,4 | RGBA8 UNORM (3-plane padded to 4) |
+| float32 | 1 | R32 Float |
+| float32 | 2 | RG32 Float |
+| float32 | 3,4 | RGBA32 Float (3-plane padded to 4) |
+| long | 1 | R32 Float (same byte width as R32 Uint) |
+| long | 2 | RG32 Float (same byte width as RG32 Float) |
+| long | 3,4 | RGBA32 Float (same byte width as RGBA32 Uint) |
+
+Note: long type is sent as float32 equivalents (same byte width). 16-bit unorm/float types have no Jitter matrix type mapping and cannot be sent.
+
+### jit.nozzle.receive (Receiver)
+
+Nozzle format is mapped back to Jitter matrix type as follows:
+
+| Nozzle Format | Matrix Type | Planes | Notes |
+|---------------|-------------|--------|-------|
+| R8/RG8/RGBA8/BGRA8/RGBA8_SRGB/BGRA8_SRGB UNORM | char | 1-4 | BGRA formats swizzled to RGBA |
+| R32/RG32/RGBA32 Float | float32 | 1-4 | Direct mapping |
+| R16/RG16/RGBA16 Float | float32 | 1-4 | Half to float expansion |
+| R16/RG16/RGBA16 UNORM | long | 1-4 | 16-bit integer |
+| R32/RGBA32 Uint | long | 1-4 | 32-bit integer |
+
+### jit.gl.nozzle.send/receive
+
+GL externals always use RGBA8_UNORM format. No format selection is available.
+
 ## Build
 
 ```bash
