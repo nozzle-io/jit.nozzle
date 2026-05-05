@@ -92,11 +92,11 @@ Jitter matrix type and planecount are mapped to nozzle format as follows:
 | float32 | 1 | R32 Float |
 | float32 | 2 | RG32 Float |
 | float32 | 3,4 | RGBA32 Float (3-plane padded to 4) |
-| long | 1 | R32 Float (same byte width as R32 Uint) |
-| long | 2 | RG32 Float (same byte width as RG32 Float) |
-| long | 3,4 | RGBA32 Float (same byte width as RGBA32 Uint) |
+| long | 1 | R32 Uint |
+| long | 2 | RGBA32 Uint (2-plane expanded to 4) |
+| long | 3,4 | RGBA32 Uint (3-plane padded to 4) |
 
-Note: long type is sent as float32 equivalents (same byte width). 16-bit unorm/float types have no Jitter matrix type mapping and cannot be sent.
+Note: long type uses nozzle uint formats (nozzle has no RG32 Uint, so 2-plane is expanded to RGBA32 Uint). 16-bit unorm/float types have no Jitter matrix type mapping and cannot be sent.
 
 ### jit.nozzle.receive (Receiver)
 
