@@ -41,4 +41,37 @@ inline format_mapping nozzle_to_jitter_format(NozzleTextureFormat fmt) {
 	}
 }
 
+struct send_format_mapping {
+	NozzleTextureFormat nozzle_fmt;
+	uint32_t bytes_per_pixel;
+};
+
+inline bool jitter_to_nozzle_format(
+	jitter_type type, int planecount, send_format_mapping &out
+) {
+	if(type == jitter_type::char_type) {
+		switch(planecount) {
+			case 1: out = {NOZZLE_FORMAT_R8_UNORM, 1}; return true;
+			case 2: out = {NOZZLE_FORMAT_RG8_UNORM, 2}; return true;
+			case 3: out = {NOZZLE_FORMAT_RGB8_UNORM, 3}; return true;
+			case 4: out = {NOZZLE_FORMAT_RGBA8_UNORM, 4}; return true;
+		}
+	} else if(type == jitter_type::float32_type) {
+		switch(planecount) {
+			case 1: out = {NOZZLE_FORMAT_R32_FLOAT, 4}; return true;
+			case 2: out = {NOZZLE_FORMAT_RG32_FLOAT, 8}; return true;
+			case 3: out = {NOZZLE_FORMAT_RGB32_FLOAT, 12}; return true;
+			case 4: out = {NOZZLE_FORMAT_RGBA32_FLOAT, 16}; return true;
+		}
+	} else if(type == jitter_type::long_type) {
+		switch(planecount) {
+			case 1: out = {NOZZLE_FORMAT_R32_UINT, 4}; return true;
+			case 2: out = {NOZZLE_FORMAT_RGBA32_UINT, 8}; return true;
+			case 3: out = {NOZZLE_FORMAT_RGB32_UINT, 12}; return true;
+			case 4: out = {NOZZLE_FORMAT_RGBA32_UINT, 16}; return true;
+		}
+	}
+	return false;
+}
+
 } // namespace jit_nozzle

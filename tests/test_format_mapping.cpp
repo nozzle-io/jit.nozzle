@@ -9,56 +9,7 @@ extern "C" {
 #include "jit_nozzle_format_mapping.hpp"
 
 using jit_nozzle::jitter_type;
-using jit_nozzle::format_mapping;
-
-struct mock_symbol { const char *s; };
-static mock_symbol _jit_sym_char_val = {"char"};
-static mock_symbol _jit_sym_float32_val = {"float32"};
-static mock_symbol _jit_sym_long_val = {"long"};
-static mock_symbol _jit_sym_jit_matrix_val = {"jit_matrix"};
-
-#define _jit_sym_char       (&_jit_sym_char_val)
-#define _jit_sym_float32    (&_jit_sym_float32_val)
-#define _jit_sym_long       (&_jit_sym_long_val)
-#define _jit_sym_jit_matrix (&_jit_sym_jit_matrix_val)
-
-struct jitter_matrix_format {
-    NozzleTextureFormat nozzle_fmt;
-    uint32_t bytes_per_pixel;
-};
-
-static bool jitter_to_nozzle_format(
-    mock_symbol *type, int planecount, jitter_matrix_format &out
-) {
-    if(type == _jit_sym_char) {
-        switch(planecount) {
-            case 1: out = {NOZZLE_FORMAT_R8_UNORM, 1}; return true;
-            case 2: out = {NOZZLE_FORMAT_RG8_UNORM, 2}; return true;
-            case 3: out = {NOZZLE_FORMAT_RGBA8_UNORM, 3}; return true;
-            case 4: out = {NOZZLE_FORMAT_RGBA8_UNORM, 4}; return true;
-        }
-    } else if(type == _jit_sym_float32) {
-        switch(planecount) {
-            case 1: out = {NOZZLE_FORMAT_R32_FLOAT, 4}; return true;
-            case 2: out = {NOZZLE_FORMAT_RG32_FLOAT, 8}; return true;
-            case 3: out = {NOZZLE_FORMAT_RGBA32_FLOAT, 12}; return true;
-            case 4: out = {NOZZLE_FORMAT_RGBA32_FLOAT, 16}; return true;
-        }
-    } else if(type == _jit_sym_long) {
-        switch(planecount) {
-            case 1: out = {NOZZLE_FORMAT_R32_UINT, 4}; return true;
-            case 2: out = {NOZZLE_FORMAT_RGBA32_UINT, 8}; return true;
-            case 3: out = {NOZZLE_FORMAT_RGBA32_UINT, 12}; return true;
-            case 4: out = {NOZZLE_FORMAT_RGBA32_UINT, 16}; return true;
-        }
-    }
-    return false;
-}
-
-static mock_symbol *type_to_mock(jitter_type t) {
-    static mock_symbol *symbols[] = {_jit_sym_char, _jit_sym_float32, _jit_sym_long};
-    return symbols[static_cast<int>(t)];
-}
+using jit_nozzle::send_format_mapping;
 
 static int tests_run = 0;
 static int tests_failed = 0;
@@ -75,67 +26,87 @@ static int tests_failed = 0;
 #define CHECK_EQ(a, b, msg) CHECK((a) == (b), msg)
 
 int main() {
-    std::printf("=== jitter_to_nozzle_format tests ===\n");
+    std::printf("=== jitter_to_nozzle_format tests (send, shared helper) ===\n");
 
     {
-        jitter_matrix_format out{};
-        CHECK(jitter_to_nozzle_format(_jit_sym_char, 1, out), "char 1-plane should succeed");
+        send_format_mapping out{};
+        CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::char_type, 1, out), "char 1-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_R8_UNORM, "char 1-plane → R8_UNORM");
         CHECK_EQ(out.bytes_per_pixel, 1u, "char 1-plane → 1 byte");
     }
     {
-        jitter_matrix_format out{};
-        CHECK(jitter_to_nozzle_format(_jit_sym_char, 2, out), "char 2-plane should succeed");
+        send_format_mapping out{};
+        CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::char_type, 2, out), "char 2-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RG8_UNORM, "char 2-plane → RG8_UNORM");
         CHECK_EQ(out.bytes_per_pixel, 2u, "char 2-plane → 2 bytes");
     }
     {
-        jitter_matrix_format out{};
-        CHECK(jitter_to_nozzle_format(_jit_sym_char, 4, out), "char 4-plane should succeed");
+        send_format_mapping out{};
+        CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::char_type, 3, out), "char 3-plane should succeed");
+        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGB8_UNORM, "char 3-plane → RGB8_UNORM");
+        CHECK_EQ(out.bytes_per_pixel, 3u, "char 3-plane → 3 bytes");
+    }
+    {
+        send_format_mapping out{};
+        CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::char_type, 4, out), "char 4-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA8_UNORM, "char 4-plane → RGBA8_UNORM");
         CHECK_EQ(out.bytes_per_pixel, 4u, "char 4-plane → 4 bytes");
     }
     {
-        jitter_matrix_format out{};
-        CHECK(jitter_to_nozzle_format(_jit_sym_float32, 1, out), "float32 1-plane should succeed");
+        send_format_mapping out{};
+        CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, 1, out), "float32 1-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_R32_FLOAT, "float32 1-plane → R32_FLOAT");
         CHECK_EQ(out.bytes_per_pixel, 4u, "float32 1-plane → 4 bytes");
     }
     {
-        jitter_matrix_format out{};
-        CHECK(jitter_to_nozzle_format(_jit_sym_float32, 2, out), "float32 2-plane should succeed");
+        send_format_mapping out{};
+        CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, 2, out), "float32 2-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RG32_FLOAT, "float32 2-plane → RG32_FLOAT");
         CHECK_EQ(out.bytes_per_pixel, 8u, "float32 2-plane → 8 bytes");
     }
     {
-        jitter_matrix_format out{};
-        CHECK(jitter_to_nozzle_format(_jit_sym_float32, 4, out), "float32 4-plane should succeed");
+        send_format_mapping out{};
+        CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, 3, out), "float32 3-plane should succeed");
+        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGB32_FLOAT, "float32 3-plane → RGB32_FLOAT");
+        CHECK_EQ(out.bytes_per_pixel, 12u, "float32 3-plane → 12 bytes");
+    }
+    {
+        send_format_mapping out{};
+        CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, 4, out), "float32 4-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA32_FLOAT, "float32 4-plane → RGBA32_FLOAT");
         CHECK_EQ(out.bytes_per_pixel, 16u, "float32 4-plane → 16 bytes");
     }
     {
-        jitter_matrix_format out{};
-        CHECK(jitter_to_nozzle_format(_jit_sym_long, 1, out), "long 1-plane should succeed");
+        send_format_mapping out{};
+        CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::long_type, 1, out), "long 1-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_R32_UINT, "long 1-plane → R32_UINT");
         CHECK_EQ(out.bytes_per_pixel, 4u, "long 1-plane → 4 bytes");
     }
     {
-        jitter_matrix_format out{};
-        CHECK(jitter_to_nozzle_format(_jit_sym_long, 4, out), "long 4-plane should succeed");
+        send_format_mapping out{};
+        CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::long_type, 2, out), "long 2-plane should succeed");
+        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA32_UINT, "long 2-plane → RGBA32_UINT");
+        CHECK_EQ(out.bytes_per_pixel, 8u, "long 2-plane → 8 bytes");
+    }
+    {
+        send_format_mapping out{};
+        CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::long_type, 3, out), "long 3-plane should succeed");
+        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGB32_UINT, "long 3-plane → RGB32_UINT");
+        CHECK_EQ(out.bytes_per_pixel, 12u, "long 3-plane → 12 bytes");
+    }
+    {
+        send_format_mapping out{};
+        CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::long_type, 4, out), "long 4-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA32_UINT, "long 4-plane → RGBA32_UINT");
         CHECK_EQ(out.bytes_per_pixel, 16u, "long 4-plane → 16 bytes");
     }
 
     {
-        jitter_matrix_format out{};
-        CHECK(!jitter_to_nozzle_format(_jit_sym_jit_matrix, 1, out), "unknown type should fail");
-    }
-    {
-        jitter_matrix_format out{};
-        CHECK(!jitter_to_nozzle_format(_jit_sym_char, 5, out), "char 5-plane should fail");
+        send_format_mapping out{};
+        CHECK(!jit_nozzle::jitter_to_nozzle_format(jitter_type::char_type, 5, out), "char 5-plane should fail");
     }
 
-    std::printf("\n=== nozzle_to_jitter_format tests (shared helper) ===\n");
+    std::printf("\n=== nozzle_to_jitter_format tests (receive, shared helper) ===\n");
 
     {
         auto m = jit_nozzle::nozzle_to_jitter_format(NOZZLE_FORMAT_R8_UNORM);

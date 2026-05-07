@@ -4,6 +4,8 @@ extern "C" {
 #include <nozzle/nozzle_c.h>
 }
 
+#include "jit_nozzle_format_mapping.hpp"
+
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -24,33 +26,22 @@ struct jitter_matrix_format {
 	uint32_t bytes_per_pixel;
 };
 
+static jit_nozzle::jitter_type symbol_to_jitter_type(c74::max::t_symbol *sym) {
+	using namespace c74::max;
+	if(sym == _jit_sym_char) return jit_nozzle::jitter_type::char_type;
+	if(sym == _jit_sym_float32) return jit_nozzle::jitter_type::float32_type;
+	if(sym == _jit_sym_long) return jit_nozzle::jitter_type::long_type;
+	return jit_nozzle::jitter_type::char_type;
+}
+
 static bool jitter_to_nozzle_format(
 	c74::max::t_symbol *type, int planecount, jitter_matrix_format &out
 ) {
-	using namespace c74::max;
-	if(type == _jit_sym_char) {
-		switch(planecount) {
-			case 1: out = {NOZZLE_FORMAT_R8_UNORM, 1}; return true;
-			case 2: out = {NOZZLE_FORMAT_RG8_UNORM, 2}; return true;
-			case 3: out = {NOZZLE_FORMAT_RGB8_UNORM, 3}; return true;
-			case 4: out = {NOZZLE_FORMAT_RGBA8_UNORM, 4}; return true;
-		}
-	} else if(type == _jit_sym_float32) {
-		switch(planecount) {
-			case 1: out = {NOZZLE_FORMAT_R32_FLOAT, 4}; return true;
-			case 2: out = {NOZZLE_FORMAT_RG32_FLOAT, 8}; return true;
-			case 3: out = {NOZZLE_FORMAT_RGB32_FLOAT, 12}; return true;
-			case 4: out = {NOZZLE_FORMAT_RGBA32_FLOAT, 16}; return true;
-		}
-	} else if(type == _jit_sym_long) {
-		switch(planecount) {
-			case 1: out = {NOZZLE_FORMAT_R32_UINT, 4}; return true;
-			case 2: out = {NOZZLE_FORMAT_RGBA32_UINT, 8}; return true;
-			case 3: out = {NOZZLE_FORMAT_RGB32_UINT, 12}; return true;
-			case 4: out = {NOZZLE_FORMAT_RGBA32_UINT, 16}; return true;
-		}
-	}
-	return false;
+	auto jtype = symbol_to_jitter_type(type);
+	jit_nozzle::send_format_mapping result{};
+	if(!jit_nozzle::jitter_to_nozzle_format(jtype, planecount, result)) return false;
+	out = {result.nozzle_fmt, result.bytes_per_pixel};
+	return true;
 }
 
 class jit_nozzle_send : public object<jit_nozzle_send> {
