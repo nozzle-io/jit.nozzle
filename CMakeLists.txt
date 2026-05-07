@@ -63,6 +63,8 @@ option(JIT_NOZZLE_BUILD_TESTS "Build format mapping unit tests" OFF)
 if(JIT_NOZZLE_BUILD_TESTS)
     enable_testing()
     add_executable(test_format_mapping tests/test_format_mapping.cpp)
-    target_include_directories(test_format_mapping PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/nozzle/include)
+    target_include_directories(test_format_mapping PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/source/common
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/nozzle/include)
     add_test(NAME test_format_mapping COMMAND test_format_mapping)
 endif()

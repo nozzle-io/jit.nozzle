@@ -4,6 +4,8 @@ extern "C" {
 #include <nozzle/nozzle_c.h>
 }
 
+#include "jit_nozzle_format_mapping.hpp"
+
 #include <cstring>
 #include <cstdlib>
 #include <mutex>
@@ -41,29 +43,14 @@ struct jitter_format_info {
 	uint32_t bytes_per_pixel;
 };
 
-static jitter_format_info nozzle_to_jitter_format(NozzleTextureFormat fmt) {
+static jitter_format_info resolve_jitter_format(const jit_nozzle::format_mapping &m) {
 	using namespace c74::max;
-	switch(fmt) {
-		case NOZZLE_FORMAT_R8_UNORM:    return {_jit_sym_char, 1, 1};
-		case NOZZLE_FORMAT_RG8_UNORM:   return {_jit_sym_char, 2, 2};
-		case NOZZLE_FORMAT_RGBA8_UNORM: return {_jit_sym_char, 4, 4};
-		case NOZZLE_FORMAT_BGRA8_UNORM: return {_jit_sym_char, 4, 4};
-		case NOZZLE_FORMAT_RGBA8_SRGB:  return {_jit_sym_char, 4, 4};
-		case NOZZLE_FORMAT_BGRA8_SRGB:  return {_jit_sym_char, 4, 4};
-		case NOZZLE_FORMAT_R32_FLOAT:   return {_jit_sym_float32, 1, 4};
-		case NOZZLE_FORMAT_RG32_FLOAT:  return {_jit_sym_float32, 2, 8};
-		case NOZZLE_FORMAT_RGBA32_FLOAT:return {_jit_sym_float32, 4, 16};
-		case NOZZLE_FORMAT_R16_FLOAT:   return {_jit_sym_float32, 1, 4};
-		case NOZZLE_FORMAT_RG16_FLOAT:  return {_jit_sym_float32, 2, 8};
-		case NOZZLE_FORMAT_RGBA16_FLOAT:return {_jit_sym_float32, 4, 16};
-		case NOZZLE_FORMAT_R16_UNORM:   return {_jit_sym_long, 1, 2};
-		case NOZZLE_FORMAT_RG16_UNORM:  return {_jit_sym_long, 2, 4};
-		case NOZZLE_FORMAT_RGBA16_UNORM:return {_jit_sym_long, 4, 8};
-		case NOZZLE_FORMAT_R32_UINT:    return {_jit_sym_long, 1, 4};
-		case NOZZLE_FORMAT_RGBA32_UINT: return {_jit_sym_long, 4, 16};
-		case NOZZLE_FORMAT_DEPTH32_FLOAT: return {_jit_sym_float32, 1, 4};
-		default:                        return {_jit_sym_char, 4, 4};
-	}
+	c74::max::t_symbol *symbols[] = {_jit_sym_char, _jit_sym_float32, _jit_sym_long};
+	return {symbols[static_cast<int>(m.type)], m.planecount, m.bytes_per_pixel};
+}
+
+static jitter_format_info nozzle_to_jitter_format(NozzleTextureFormat fmt) {
+	return resolve_jitter_format(jit_nozzle::nozzle_to_jitter_format(fmt));
 }
 
 class jit_nozzle_receive : public object<jit_nozzle_receive> {
