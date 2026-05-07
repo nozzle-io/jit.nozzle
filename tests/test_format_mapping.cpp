@@ -111,7 +111,7 @@ int main() {
     {
         jitter_matrix_format out{};
         CHECK(jitter_to_nozzle_format(_jit_sym_char, 3, out), "char 3-plane should succeed");
-        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA8_UNORM, "char 3-plane → RGBA8_UNORM");
+        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGB8_UNORM, "char 3-plane → RGB8_UNORM");
         CHECK_EQ(out.bytes_per_pixel, 3u, "char 3-plane → 3 bytes");
     }
     {
@@ -137,7 +137,7 @@ int main() {
     {
         jitter_matrix_format out{};
         CHECK(jitter_to_nozzle_format(_jit_sym_float32, 3, out), "float32 3-plane should succeed");
-        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA32_FLOAT, "float32 3-plane → RGBA32_FLOAT");
+        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGB32_FLOAT, "float32 3-plane → RGB32_FLOAT");
         CHECK_EQ(out.bytes_per_pixel, 12u, "float32 3-plane → 12 bytes");
     }
     {
@@ -163,7 +163,7 @@ int main() {
     {
         jitter_matrix_format out{};
         CHECK(jitter_to_nozzle_format(_jit_sym_long, 3, out), "long 3-plane should succeed");
-        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA32_UINT, "long 3-plane → RGBA32_UINT");
+        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGB32_UINT, "long 3-plane → RGB32_UINT");
         CHECK_EQ(out.bytes_per_pixel, 12u, "long 3-plane → 12 bytes");
     }
     {

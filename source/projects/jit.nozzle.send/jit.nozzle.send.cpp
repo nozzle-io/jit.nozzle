@@ -32,21 +32,21 @@ static bool jitter_to_nozzle_format(
 		switch(planecount) {
 			case 1: out = {NOZZLE_FORMAT_R8_UNORM, 1}; return true;
 			case 2: out = {NOZZLE_FORMAT_RG8_UNORM, 2}; return true;
-			case 3: out = {NOZZLE_FORMAT_RGBA8_UNORM, 3}; return true;
+			case 3: out = {NOZZLE_FORMAT_RGB8_UNORM, 3}; return true;
 			case 4: out = {NOZZLE_FORMAT_RGBA8_UNORM, 4}; return true;
 		}
 	} else if(type == _jit_sym_float32) {
 		switch(planecount) {
 			case 1: out = {NOZZLE_FORMAT_R32_FLOAT, 4}; return true;
 			case 2: out = {NOZZLE_FORMAT_RG32_FLOAT, 8}; return true;
-			case 3: out = {NOZZLE_FORMAT_RGBA32_FLOAT, 12}; return true;
+			case 3: out = {NOZZLE_FORMAT_RGB32_FLOAT, 12}; return true;
 			case 4: out = {NOZZLE_FORMAT_RGBA32_FLOAT, 16}; return true;
 		}
 	} else if(type == _jit_sym_long) {
 		switch(planecount) {
 			case 1: out = {NOZZLE_FORMAT_R32_UINT, 4}; return true;
-			case 2: out = {NOZZLE_FORMAT_RGBA32_UINT, 8}; return true;
-			case 3: out = {NOZZLE_FORMAT_RGBA32_UINT, 12}; return true;
+			case 2: out = {NOZZLE_FORMAT_RG32_UINT, 8}; return true;
+			case 3: out = {NOZZLE_FORMAT_RGB32_UINT, 12}; return true;
 			case 4: out = {NOZZLE_FORMAT_RGBA32_UINT, 16}; return true;
 		}
 	}
@@ -204,7 +204,7 @@ private:
 
 				auto *src = static_cast<const unsigned char *>(bp);
 			auto *dst = static_cast<unsigned char *>(mapped.data);
-			bool is_swizzle_type = (minfo.type == _jit_sym_char || minfo.type == _jit_sym_float32);
+			bool is_swizzle_type = (minfo.type == _jit_sym_char || minfo.type == _jit_sym_float32 || minfo.type == _jit_sym_long);
 			bool need_argb_swizzle = (minfo.planecount == 4 && is_swizzle_type);
 			uint32_t pixel_bytes = jfmt.bytes_per_pixel;
 			uint32_t copy_bytes = std::min(matrix_row_bytes, w * pixel_bytes);
@@ -242,10 +242,32 @@ private:
 					return;
 				}
 			} else {
-				for(uint32_t y = 0; y < h; y++) {
-					const unsigned char *src_row = src + y * matrix_row_bytes;
-					unsigned char *dst_row = dst + static_cast<int64_t>(y) * mapped.row_stride_bytes;
-					std::memcpy(dst_row, src_row, copy_bytes);
+				// 3-plane matrices need alpha padding when nozzle upgrades to 4ch internally.
+				// The mapped frame will be 4ch (rgba8/rgba32f/rgba32ui), but source is only 3ch.
+				bool is_3plane = (minfo.planecount == 3 && is_swizzle_type);
+				if (is_3plane) {
+					uint32_t src_bpp = pixel_bytes;
+					uint32_t dst_bpp = (src_bpp / 3) * 4;
+					for(uint32_t y = 0; y < h; y++) {
+						const unsigned char *src_row = src + y * matrix_row_bytes;
+						unsigned char *dst_row = dst + static_cast<int64_t>(y) * mapped.row_stride_bytes;
+						for(uint32_t x = 0; x < w; x++) {
+							std::memcpy(dst_row + x * dst_bpp, src_row + x * src_bpp, src_bpp);
+							if (src_bpp == 3) {
+								dst_row[x * dst_bpp + 3] = 0xFF;
+							} else if (dst_bpp == 16) {
+								*reinterpret_cast<float *>(dst_row + x * dst_bpp + 12) = 1.0f;
+							} else {
+								*reinterpret_cast<uint32_t *>(dst_row + x * dst_bpp + 12) = 1u;
+							}
+						}
+					}
+				} else {
+					for(uint32_t y = 0; y < h; y++) {
+						const unsigned char *src_row = src + y * matrix_row_bytes;
+						unsigned char *dst_row = dst + static_cast<int64_t>(y) * mapped.row_stride_bytes;
+						std::memcpy(dst_row, src_row, copy_bytes);
+					}
 				}
 			}
 
