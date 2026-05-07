@@ -5,6 +5,7 @@ extern "C" {
 }
 
 #include <cstring>
+#include <cstdlib>
 #include <mutex>
 #include <string>
 
@@ -22,59 +23,6 @@ static uint32_t half_float_channels(NozzleTextureFormat fmt) {
 		case NOZZLE_FORMAT_RG16_FLOAT:  return 2;
 		case NOZZLE_FORMAT_RGBA16_FLOAT:return 4;
 		default:                        return 0;
-	}
-}
-
-static float half_to_float(uint16_t h) {
-	uint32_t sign = static_cast<uint32_t>(h >> 15) & 1;
-	uint32_t exponent = static_cast<uint32_t>(h >> 10) & 0x1F;
-	uint32_t mantissa = static_cast<uint32_t>(h) & 0x3FF;
-
-	uint32_t f;
-	if (exponent == 0) {
-		if (mantissa == 0) {
-			f = sign << 31;
-		} else {
-			exponent = 1;
-			while (!(mantissa & 0x400)) {
-				mantissa <<= 1;
-				exponent--;
-			}
-			mantissa = (mantissa & 0x3FF) << 13;
-			f = (sign << 31) | ((127 + 15 - 1 - exponent) << 23) | mantissa;
-		}
-	} else if (exponent == 31) {
-		f = (sign << 31) | (0xFFu << 23) | (mantissa << 13);
-	} else {
-		f = (sign << 31) | ((exponent - 15 + 127) << 23) | (mantissa << 13);
-	}
-
-	float result;
-	std::memcpy(&result, &f, sizeof(result));
-	return result;
-}
-
-// widen RGBA half-float to ARGB float32 in one pass (Jitter plane order)
-static void widen_half_swizzle_rgba_to_argb(
-	const uint8_t *src, uint8_t *dst,
-	uint32_t width, uint32_t height,
-	int64_t src_stride, uint32_t dst_row_bytes)
-{
-	for (uint32_t y = 0; y < height; y++) {
-		const uint16_t *sr = reinterpret_cast<const uint16_t *>(
-			src + static_cast<int64_t>(y) * src_stride);
-		float *dr = reinterpret_cast<float *>(
-			dst + static_cast<uint64_t>(y) * dst_row_bytes);
-		for (uint32_t x = 0; x < width; x++) {
-			uint16_t rh = sr[x * 4 + 0];
-			uint16_t gh = sr[x * 4 + 1];
-			uint16_t bh = sr[x * 4 + 2];
-			uint16_t ah = sr[x * 4 + 3];
-			dr[x * 4 + 0] = half_to_float(ah);
-			dr[x * 4 + 1] = half_to_float(rh);
-			dr[x * 4 + 2] = half_to_float(gh);
-			dr[x * 4 + 3] = half_to_float(bh);
-		}
 	}
 }
 
@@ -398,8 +346,38 @@ private:
 					uint32_t src_row_bytes = static_cast<uint32_t>(src_stride < 0 ? -src_stride : src_stride);
 
 					if (finfo.format == NOZZLE_FORMAT_RGBA16_FLOAT) {
-						widen_half_swizzle_rgba_to_argb(
-							src, out_bp, w, h, src_stride, dst_row_bytes);
+						// Widen RGBA16F → RGBA32F into temp buffer, then swizzle RGBA→ARGB
+						auto *temp = static_cast<uint8_t *>(std::malloc(static_cast<size_t>(dst_row_bytes) * h));
+						if (!temp) {
+							cerr << "jit.nozzle.receive: temp buffer alloc failed" << endl;
+							jit_object_method(output_matrix_, _jit_sym_lock, out_savelock);
+							nozzle_frame_unlock_pixels(frame);
+							nozzle_frame_release(frame);
+							return;
+						}
+						NozzleErrorCode widen_err = nozzle_widen_half_to_float(
+							src, temp, w, h, src_row_bytes, dst_row_bytes, 4);
+						if (widen_err != NOZZLE_OK) {
+							std::free(temp);
+							cerr << "jit.nozzle.receive: half-to-float widen failed (error " << widen_err << ")" << endl;
+							jit_object_method(output_matrix_, _jit_sym_lock, out_savelock);
+							nozzle_frame_unlock_pixels(frame);
+							nozzle_frame_release(frame);
+							return;
+						}
+						uint8_t permute_map[4] = {3, 0, 1, 2};
+						NozzleErrorCode swiz_err = nozzle_swizzle_channels(
+							temp, out_bp, w, h,
+							dst_row_bytes, dst_row_bytes,
+							NOZZLE_FORMAT_RGBA32_FLOAT, permute_map);
+						std::free(temp);
+						if (swiz_err != NOZZLE_OK) {
+							cerr << "jit.nozzle.receive: swizzle failed (error " << swiz_err << ")" << endl;
+							jit_object_method(output_matrix_, _jit_sym_lock, out_savelock);
+							nozzle_frame_unlock_pixels(frame);
+							nozzle_frame_release(frame);
+							return;
+						}
 					} else {
 						NozzleErrorCode widen_err = nozzle_widen_half_to_float(
 							src, out_bp, w, h,
