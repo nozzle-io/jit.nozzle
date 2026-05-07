@@ -115,11 +115,7 @@ static NozzleTextureFormat query_gl_texture_format(uint32_t gl_id, uint32_t targ
 	GLint internal_format = 0;
 	glGetTexLevelParameteriv(target, 0, GL_TEXTURE_INTERNAL_FORMAT, &internal_format);
 	glBindTexture(target, 0);
-	NozzleTextureFormat fmt = gl_internal_format_to_nozzle(internal_format);
-	if (fmt == NOZZLE_FORMAT_UNKNOWN) {
-		fmt = NOZZLE_FORMAT_RGBA8_UNORM;
-	}
-	return fmt;
+	return gl_internal_format_to_nozzle(internal_format);
 }
 
 class jit_gl_nozzle_send : public object<jit_gl_nozzle_send> {
@@ -260,6 +256,10 @@ private:
 		if(!sender_) return;
 
 		NozzleTextureFormat fmt = query_gl_texture_format(static_cast<uint32_t>(gl_id), 0x0DE1);
+		if(fmt == NOZZLE_FORMAT_UNKNOWN) {
+			cerr << "jit.gl.nozzle.send: unsupported GL texture format" << endl;
+			return;
+		}
 
 		NozzleErrorCode nerr = nozzle_sender_publish_gl_texture(
 			sender_,
@@ -302,6 +302,10 @@ private:
 		if(!sender_) return;
 
 	NozzleTextureFormat fmt = query_gl_texture_format(gl_id, 0x0DE1);
+	if(fmt == NOZZLE_FORMAT_UNKNOWN) {
+		cerr << "jit.gl.nozzle.send: unsupported GL texture format" << endl;
+		return;
+	}
 
 	NozzleErrorCode nerr = nozzle_sender_publish_gl_texture(
 		sender_,
@@ -330,6 +334,10 @@ private:
 		if(!sender_) return;
 
 		NozzleTextureFormat fmt = query_gl_texture_format(cached_gl_texture_name_, 0x0DE1);
+		if(fmt == NOZZLE_FORMAT_UNKNOWN) {
+			cerr << "jit.gl.nozzle.send: unsupported GL texture format on republish" << endl;
+			return;
+		}
 		cached_format_ = fmt;
 
 		NozzleErrorCode nerr = nozzle_sender_publish_gl_texture(
