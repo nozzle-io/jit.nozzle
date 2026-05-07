@@ -66,9 +66,9 @@ static jitter_format_info nozzle_to_jitter_format(NozzleTextureFormat fmt) {
         case NOZZLE_FORMAT_R32_FLOAT:   return {_jit_sym_float32, 1, 4};
         case NOZZLE_FORMAT_RG32_FLOAT:  return {_jit_sym_float32, 2, 8};
         case NOZZLE_FORMAT_RGBA32_FLOAT:return {_jit_sym_float32, 4, 16};
-        case NOZZLE_FORMAT_R16_FLOAT:   return {_jit_sym_float32, 1, 2};
-        case NOZZLE_FORMAT_RG16_FLOAT:  return {_jit_sym_float32, 2, 4};
-        case NOZZLE_FORMAT_RGBA16_FLOAT:return {_jit_sym_float32, 4, 8};
+        case NOZZLE_FORMAT_R16_FLOAT:   return {_jit_sym_float32, 1, 4};
+        case NOZZLE_FORMAT_RG16_FLOAT:  return {_jit_sym_float32, 2, 8};
+        case NOZZLE_FORMAT_RGBA16_FLOAT:return {_jit_sym_float32, 4, 16};
         case NOZZLE_FORMAT_R16_UNORM:   return {_jit_sym_long, 1, 2};
         case NOZZLE_FORMAT_RG16_UNORM:  return {_jit_sym_long, 2, 4};
         case NOZZLE_FORMAT_RGBA16_UNORM:return {_jit_sym_long, 4, 8};
@@ -243,18 +243,19 @@ int main() {
         auto r = nozzle_to_jitter_format(NOZZLE_FORMAT_R16_FLOAT);
         CHECK_EQ(r.type, _jit_sym_float32, "R16_FLOAT → float32");
         CHECK_EQ(r.planecount, 1, "R16_FLOAT → 1 plane");
-        CHECK_EQ(r.bytes_per_pixel, 2u, "R16_FLOAT → 2 bytes");
+        CHECK_EQ(r.bytes_per_pixel, 4u, "R16_FLOAT → 4 bytes (float32 dest)");
     }
     {
         auto r = nozzle_to_jitter_format(NOZZLE_FORMAT_RG16_FLOAT);
         CHECK_EQ(r.type, _jit_sym_float32, "RG16_FLOAT → float32");
         CHECK_EQ(r.planecount, 2, "RG16_FLOAT → 2 planes");
+        CHECK_EQ(r.bytes_per_pixel, 8u, "RG16_FLOAT → 8 bytes (float32 dest)");
     }
     {
         auto r = nozzle_to_jitter_format(NOZZLE_FORMAT_RGBA16_FLOAT);
         CHECK_EQ(r.type, _jit_sym_float32, "RGBA16_FLOAT → float32");
         CHECK_EQ(r.planecount, 4, "RGBA16_FLOAT → 4 planes");
-        CHECK_EQ(r.bytes_per_pixel, 8u, "RGBA16_FLOAT → 8 bytes");
+        CHECK_EQ(r.bytes_per_pixel, 16u, "RGBA16_FLOAT → 16 bytes (float32 dest)");
     }
 
     // 16-bit unorm → long
