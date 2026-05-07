@@ -45,7 +45,7 @@ static bool jitter_to_nozzle_format(
 	} else if(type == _jit_sym_long) {
 		switch(planecount) {
 			case 1: out = {NOZZLE_FORMAT_R32_UINT, 4}; return true;
-			case 2: out = {NOZZLE_FORMAT_RG32_UINT, 8}; return true;
+			case 2: out = {NOZZLE_FORMAT_RGBA32_UINT, 8}; return true;
 			case 3: out = {NOZZLE_FORMAT_RGB32_UINT, 12}; return true;
 			case 4: out = {NOZZLE_FORMAT_RGBA32_UINT, 16}; return true;
 		}
