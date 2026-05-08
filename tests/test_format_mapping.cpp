@@ -106,6 +106,13 @@ int main() {
         CHECK(!jit_nozzle::jitter_to_nozzle_format(jitter_type::char_type, 5, out), "char 5-plane should fail");
     }
 
+    {
+        send_format_mapping out{};
+        auto invalid_type = static_cast<jitter_type>(99);
+        CHECK(!jit_nozzle::jitter_to_nozzle_format(invalid_type, 1, out), "unknown jitter_type should fail");
+        CHECK(!jit_nozzle::jitter_to_nozzle_format(invalid_type, 4, out), "unknown jitter_type 4-plane should fail");
+    }
+
     std::printf("\n=== nozzle_to_jitter_format tests (receive, shared helper) ===\n");
 
     {

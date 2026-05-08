@@ -26,18 +26,19 @@ struct jitter_matrix_format {
 	uint32_t bytes_per_pixel;
 };
 
-static jit_nozzle::jitter_type symbol_to_jitter_type(c74::max::t_symbol *sym) {
+static bool symbol_to_jitter_type(c74::max::t_symbol *sym, jit_nozzle::jitter_type &out) {
 	using namespace c74::max;
-	if(sym == _jit_sym_char) return jit_nozzle::jitter_type::char_type;
-	if(sym == _jit_sym_float32) return jit_nozzle::jitter_type::float32_type;
-	if(sym == _jit_sym_long) return jit_nozzle::jitter_type::long_type;
-	return jit_nozzle::jitter_type::char_type;
+	if(sym == _jit_sym_char) { out = jit_nozzle::jitter_type::char_type; return true; }
+	if(sym == _jit_sym_float32) { out = jit_nozzle::jitter_type::float32_type; return true; }
+	if(sym == _jit_sym_long) { out = jit_nozzle::jitter_type::long_type; return true; }
+	return false;
 }
 
 static bool jitter_to_nozzle_format(
 	c74::max::t_symbol *type, int planecount, jitter_matrix_format &out
 ) {
-	auto jtype = symbol_to_jitter_type(type);
+	jit_nozzle::jitter_type jtype{};
+	if(!symbol_to_jitter_type(type, jtype)) return false;
 	jit_nozzle::send_format_mapping result{};
 	if(!jit_nozzle::jitter_to_nozzle_format(jtype, planecount, result)) return false;
 	out = {result.nozzle_fmt, result.bytes_per_pixel};
