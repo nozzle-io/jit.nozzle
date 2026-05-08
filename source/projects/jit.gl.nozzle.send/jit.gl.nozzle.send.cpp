@@ -211,6 +211,8 @@ private:
 		desc.name = name.c_str();
 		desc.application_name = "jit.gl.nozzle.send";
 		desc.ring_buffer_size = 3;
+    desc.fallback_flags_valid = 1;
+    desc.fallback_flags = NOZZLE_FALLBACK_SAFE_DEFAULTS;
 
 		NozzleErrorCode err = nozzle_sender_create(&desc, &sender_);
 		if(err != NOZZLE_OK) {
