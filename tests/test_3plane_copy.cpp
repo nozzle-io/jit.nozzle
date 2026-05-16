@@ -204,6 +204,66 @@ int main() {
 		CHECK(!r.ok, "zero height rejected");
 	}
 
+	// --- copy_3plane_to_storage: unsupported storage format rejected ---
+	{
+		uint8_t src[3] = {0x11, 0x22, 0x33};
+		uint8_t dst[4]{};
+		auto r = copy_3plane_to_storage(src, dst, 1, 1, 3, 4, 3, 4,
+			NOZZLE_FORMAT_RGB8_UNORM);
+		CHECK(!r.ok, "rgb8 storage format rejected");
+		r = copy_3plane_to_storage(src, dst, 1, 1, 3, 4, 3, 4,
+			NOZZLE_FORMAT_R8_UNORM);
+		CHECK(!r.ok, "r8 storage format rejected");
+	}
+
+	// --- copy_3plane_to_storage: dst_bpp mismatch rejected ---
+	{
+		uint8_t src[3] = {0x11, 0x22, 0x33};
+		uint8_t dst[8]{};
+		auto r = copy_3plane_to_storage(src, dst, 1, 1, 3, 8, 3, 8,
+			NOZZLE_FORMAT_RGBA8_UNORM);
+		CHECK(!r.ok, "dst_bpp mismatch rejected (expected 4 for rgba8)");
+	}
+
+	// --- copy_3plane_to_storage: src_row_bytes too small rejected ---
+	{
+		uint8_t src[3] = {0x11, 0x22, 0x33};
+		uint8_t dst[4]{};
+		auto r = copy_3plane_to_storage(src, dst, 2, 1, 3, 8, 3, 4,
+			NOZZLE_FORMAT_RGBA8_UNORM);
+		CHECK(!r.ok, "src_row_bytes too small rejected (2*3=6 > 3)");
+	}
+
+	// --- copy_3plane_to_storage: zero dst_row_stride rejected ---
+	{
+		uint8_t src[3] = {0x11, 0x22, 0x33};
+		uint8_t dst[4]{};
+		auto r = copy_3plane_to_storage(src, dst, 1, 1, 3, 0, 3, 4,
+			NOZZLE_FORMAT_RGBA8_UNORM);
+		CHECK(!r.ok, "zero dst_row_stride rejected");
+	}
+
+	// --- copy_3plane_to_storage: dst_row_stride too small rejected ---
+	{
+		uint8_t src[6] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
+		uint8_t dst[4]{};
+		auto r = copy_3plane_to_storage(src, dst, 2, 1, 6, 4, 3, 4,
+			NOZZLE_FORMAT_RGBA8_UNORM);
+		CHECK(!r.ok, "dst_row_stride too small rejected (2*4=8 > 4)");
+	}
+
+	// --- copy_3plane_to_storage: negative dst_row_stride accepted ---
+	{
+		uint8_t src[6] = {0x10, 0x20, 0x30, 0x40, 0x50, 0x60};
+		uint8_t dst[2 * 8] = {};
+		auto r = copy_3plane_to_storage(src, dst, 2, 2, 6, -8, 3, 4,
+			NOZZLE_FORMAT_RGBA8_UNORM);
+		CHECK(r.ok, "negative dst_row_stride accepted");
+		CHECK_EQ(dst[0], 0x10, "negative stride row0 px0 R");
+		CHECK_EQ(dst[1], 0x20, "negative stride row0 px0 G");
+		CHECK_EQ(dst[2], 0x30, "negative stride row0 px0 B");
+	}
+
 	std::printf("\n%d/%d tests passed\n", tests_run - tests_failed, tests_run);
 	return tests_failed > 0 ? 1 : 0;
 }

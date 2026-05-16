@@ -1,6 +1,7 @@
 #pragma once
 
 #include <nozzle/nozzle_c.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -47,10 +48,21 @@ inline rgb_copy_result copy_3plane_to_storage(
 	if (!src || !dst) return {false, "null pointer"};
 	if (width == 0 || height == 0) return {false, "zero dimensions"};
 
+	uint32_t exp_bpp = expected_storage_bpp(storage_format);
+	if (exp_bpp == 0) return {false, "unsupported storage format"};
+	if (dst_bpp != exp_bpp) return {false, "dst_bpp mismatch for storage format"};
+	if (src_row_bytes < width * src_bpp) return {false, "src_row_bytes too small"};
+
+	int64_t abs_dst_stride = dst_row_stride < 0 ? -dst_row_stride : dst_row_stride;
+	if (abs_dst_stride == 0) return {false, "zero dst_row_stride"};
+	if (static_cast<uint64_t>(abs_dst_stride) < static_cast<uint64_t>(width) * dst_bpp) {
+		return {false, "dst_row_stride too small"};
+	}
+
 	bool is_bgra_8bit = (storage_format == NOZZLE_FORMAT_BGRA8_UNORM);
 
 	for (uint32_t y = 0; y < height; y++) {
-		const uint8_t *src_row = src + y * src_row_bytes;
+		const uint8_t *src_row = src + static_cast<std::size_t>(y) * src_row_bytes;
 		uint8_t *dst_row = dst + static_cast<int64_t>(y) * dst_row_stride;
 		for (uint32_t x = 0; x < width; x++) {
 			uint8_t *dst_px = dst_row + x * dst_bpp;

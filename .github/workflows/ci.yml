@@ -17,7 +17,10 @@ jobs:
           submodules: recursive
 
       - name: Configure and Build
-        run: cmake -B build && cmake --build build --config Release
+        run: cmake -B build -DJIT_NOZZLE_BUILD_TESTS=ON && cmake --build build --config Release
+
+      - name: Run Tests
+        run: ctest --test-dir build --output-on-failure -C Release
 
       - name: Verify externals
         run: |
@@ -46,7 +49,10 @@ jobs:
           submodules: recursive
 
       - name: Configure and Build
-        run: cmake -B build -G "Visual Studio 17 2022" -A x64 && cmake --build build --config Release
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64 -DJIT_NOZZLE_BUILD_TESTS=ON && cmake --build build --config Release
+
+      - name: Run Tests
+        run: ctest --test-dir build --output-on-failure -C Release
 
       - name: Verify externals
         shell: bash
