@@ -240,7 +240,7 @@ private:
 
 				NozzleErrorCode swiz_err = nozzle_swizzle_channels(
 					src, dst, w, h,
-					matrix_row_bytes, static_cast<uint32_t>(mapped.row_stride_bytes),
+					matrix_row_bytes, mapped.row_stride_bytes,
 					swiz_fmt, permute_map);
 				if (swiz_err != NOZZLE_OK) {
 					cerr << "jit.nozzle.send: swizzle failed (error " << swiz_err << ")" << endl;

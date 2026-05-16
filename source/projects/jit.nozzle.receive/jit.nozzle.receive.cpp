@@ -313,10 +313,10 @@ private:
 					} else if (is_bgra) {
 						swiz_fmt = NOZZLE_FORMAT_BGRA8_UNORM;
 					} else {
-						swiz_fmt = NOZZLE_FORMAT_RGBA8_UNORM;
+					swiz_fmt = NOZZLE_FORMAT_RGBA8_UNORM;
 					}
 
-					uint32_t src_row_bytes = static_cast<uint32_t>(src_stride < 0 ? -src_stride : src_stride);
+					int64_t src_row_bytes = src_stride;
 					NozzleErrorCode swiz_err = nozzle_swizzle_channels(
 						src, out_bp, w, h,
 						src_row_bytes, dst_row_bytes,
@@ -330,7 +330,7 @@ private:
 					}
 				} else if (is_half_float_format(finfo.format)) {
 					uint32_t channels = half_float_channels(finfo.format);
-					uint32_t src_row_bytes = static_cast<uint32_t>(src_stride < 0 ? -src_stride : src_stride);
+					int64_t src_row_bytes = src_stride;
 
 					if (finfo.format == NOZZLE_FORMAT_RGBA16_FLOAT) {
 						// Widen RGBA16F → RGBA32F into temp buffer, then swizzle RGBA→ARGB
