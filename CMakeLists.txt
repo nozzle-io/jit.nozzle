@@ -67,4 +67,10 @@ if(JIT_NOZZLE_BUILD_TESTS)
         ${CMAKE_CURRENT_SOURCE_DIR}/source/common
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/nozzle/include)
     add_test(NAME test_format_mapping COMMAND test_format_mapping)
+
+    add_executable(test_3plane_copy tests/test_3plane_copy.cpp)
+    target_include_directories(test_3plane_copy PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/source/common
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/nozzle/include)
+    add_test(NAME test_3plane_copy COMMAND test_3plane_copy)
 endif()

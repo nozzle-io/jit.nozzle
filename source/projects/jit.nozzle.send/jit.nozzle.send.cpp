@@ -5,12 +5,16 @@ extern "C" {
 }
 
 #include "jit_nozzle_format_mapping.hpp"
+#include "jit_nozzle_3plane_copy.hpp"
 
 #include <cstring>
 #include <mutex>
 #include <string>
 
 using namespace c74::min;
+using jit_nozzle::is_rgb_semantic;
+using jit_nozzle::is_valid_rgb_to_rgba_storage;
+using jit_nozzle::expected_storage_bpp;
 
 static std::string to_string(const symbol &s) {
 	return std::string((const char *)s);
@@ -43,32 +47,6 @@ static bool jitter_to_nozzle_format(
 	if(!jit_nozzle::jitter_to_nozzle_format(jtype, planecount, result)) return false;
 	out = {result.nozzle_fmt, result.bytes_per_pixel};
 	return true;
-}
-
-static bool is_rgb_semantic(NozzleTextureFormat fmt) {
-	return fmt == NOZZLE_FORMAT_RGB8_UNORM
-		|| fmt == NOZZLE_FORMAT_RGB16_UNORM
-		|| fmt == NOZZLE_FORMAT_RGB16_FLOAT
-		|| fmt == NOZZLE_FORMAT_RGB32_FLOAT
-		|| fmt == NOZZLE_FORMAT_RGB32_UINT;
-}
-
-static bool is_valid_rgb_to_rgba_storage(NozzleTextureFormat semantic, NozzleTextureFormat storage) {
-	if (semantic == NOZZLE_FORMAT_RGB8_UNORM) {
-		return storage == NOZZLE_FORMAT_RGBA8_UNORM || storage == NOZZLE_FORMAT_BGRA8_UNORM;
-	}
-	if (semantic == NOZZLE_FORMAT_RGB16_UNORM) return storage == NOZZLE_FORMAT_RGBA16_UNORM;
-	if (semantic == NOZZLE_FORMAT_RGB16_FLOAT) return storage == NOZZLE_FORMAT_RGBA16_FLOAT;
-	if (semantic == NOZZLE_FORMAT_RGB32_FLOAT) return storage == NOZZLE_FORMAT_RGBA32_FLOAT;
-	if (semantic == NOZZLE_FORMAT_RGB32_UINT) return storage == NOZZLE_FORMAT_RGBA32_UINT;
-	return false;
-}
-
-static uint32_t expected_storage_bpp(NozzleTextureFormat storage) {
-	if (storage == NOZZLE_FORMAT_RGBA8_UNORM || storage == NOZZLE_FORMAT_BGRA8_UNORM) return 4;
-	if (storage == NOZZLE_FORMAT_RGBA16_UNORM || storage == NOZZLE_FORMAT_RGBA16_FLOAT) return 8;
-	if (storage == NOZZLE_FORMAT_RGBA32_FLOAT || storage == NOZZLE_FORMAT_RGBA32_UINT) return 16;
-	return 0;
 }
 
 class jit_nozzle_send : public object<jit_nozzle_send> {
@@ -310,28 +288,27 @@ private:
 
 					uint32_t src_bpp = pixel_bytes;
 					uint32_t dst_bpp = resolved.bytes_per_pixel;
-					bool is_bgra_8bit = (resolved.storage_format == NOZZLE_FORMAT_BGRA8_UNORM);
 
-					for (uint32_t y = 0; y < h; y++) {
-						const unsigned char *src_row = src + y * matrix_row_bytes;
-						unsigned char *dst_row = dst + static_cast<int64_t>(y) * mapped.row_stride_bytes;
-						for (uint32_t x = 0; x < w; x++) {
-							unsigned char *dst_px = dst_row + x * dst_bpp;
-							const unsigned char *src_px = src_row + x * src_bpp;
-							if (is_bgra_8bit) {
-								dst_px[0] = src_px[2];
-								dst_px[1] = src_px[1];
-								dst_px[2] = src_px[0];
-							} else {
-								std::memcpy(dst_px, src_px, src_bpp);
-							}
-						}
+					auto copy_result = jit_nozzle::copy_3plane_to_storage(
+						src, dst, w, h, matrix_row_bytes,
+						mapped.row_stride_bytes, src_bpp, dst_bpp,
+						resolved.storage_format);
+					if (!copy_result.ok) {
+						cerr << "jit.nozzle.send: 3-plane copy failed: " << copy_result.error << endl;
+						nozzle_frame_unlock_writable_pixels(frame);
+						nozzle_frame_release(frame);
+						jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+						return;
 					}
 
 					err = nozzle_fill_opaque_alpha_channel(
 						mapped.data, w, h, mapped.row_stride_bytes, mapped.format);
 					if (err != NOZZLE_OK) {
 						cerr << "jit.nozzle.send: alpha fill failed (error " << err << ")" << endl;
+						nozzle_frame_unlock_writable_pixels(frame);
+						nozzle_frame_release(frame);
+						jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+						return;
 					}
 				} else {
 					for(uint32_t y = 0; y < h; y++) {
