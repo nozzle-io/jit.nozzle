@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 
 namespace jit_nozzle {
 
@@ -33,6 +34,13 @@ inline uint32_t expected_storage_bpp(NozzleTextureFormat storage) {
 	return 0;
 }
 
+inline uint32_t expected_src_bpp(NozzleTextureFormat storage) {
+	if (storage == NOZZLE_FORMAT_RGBA8_UNORM || storage == NOZZLE_FORMAT_BGRA8_UNORM) return 3;
+	if (storage == NOZZLE_FORMAT_RGBA16_UNORM || storage == NOZZLE_FORMAT_RGBA16_FLOAT) return 6;
+	if (storage == NOZZLE_FORMAT_RGBA32_FLOAT || storage == NOZZLE_FORMAT_RGBA32_UINT) return 12;
+	return 0;
+}
+
 struct rgb_copy_result {
 	bool ok;
 	const char *error;
@@ -51,8 +59,16 @@ inline rgb_copy_result copy_3plane_to_storage(
 	uint32_t exp_bpp = expected_storage_bpp(storage_format);
 	if (exp_bpp == 0) return {false, "unsupported storage format"};
 	if (dst_bpp != exp_bpp) return {false, "dst_bpp mismatch for storage format"};
-	if (src_row_bytes < width * src_bpp) return {false, "src_row_bytes too small"};
 
+	uint32_t exp_src = expected_src_bpp(storage_format);
+	if (src_bpp != exp_src) return {false, "src_bpp mismatch for storage format"};
+
+	uint64_t min_src_row = static_cast<uint64_t>(width) * src_bpp;
+	if (min_src_row > UINT32_MAX) return {false, "src row bytes overflow"};
+	if (src_row_bytes < static_cast<uint32_t>(min_src_row)) return {false, "src_row_bytes too small"};
+
+	constexpr int64_t kInt64Min = std::numeric_limits<int64_t>::min();
+	if (dst_row_stride == kInt64Min) return {false, "dst_row_stride is INT64_MIN"};
 	int64_t abs_dst_stride = dst_row_stride < 0 ? -dst_row_stride : dst_row_stride;
 	if (abs_dst_stride == 0) return {false, "zero dst_row_stride"};
 	if (static_cast<uint64_t>(abs_dst_stride) < static_cast<uint64_t>(width) * dst_bpp) {

@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 
 #include <nozzle/nozzle_c.h>
 
@@ -254,14 +255,54 @@ int main() {
 
 	// --- copy_3plane_to_storage: negative dst_row_stride accepted ---
 	{
-		uint8_t src[6] = {0x10, 0x20, 0x30, 0x40, 0x50, 0x60};
+		uint8_t src[2 * 6] = {
+			0x10, 0x20, 0x30, 0x40, 0x50, 0x60,
+			0x70, 0x80, 0x90, 0xA0, 0xB0, 0xC0
+		};
 		uint8_t dst[2 * 8] = {};
-		auto r = copy_3plane_to_storage(src, dst, 2, 2, 6, -8, 3, 4,
+		uint8_t *logical_first_row = dst + 8;
+		auto r = copy_3plane_to_storage(src, logical_first_row, 2, 2, 6, -8, 3, 4,
 			NOZZLE_FORMAT_RGBA8_UNORM);
 		CHECK(r.ok, "negative dst_row_stride accepted");
-		CHECK_EQ(dst[0], 0x10, "negative stride row0 px0 R");
-		CHECK_EQ(dst[1], 0x20, "negative stride row0 px0 G");
-		CHECK_EQ(dst[2], 0x30, "negative stride row0 px0 B");
+		// logical row 0 at dst+8, logical row 1 at dst+0
+		CHECK_EQ(dst[8], 0x10, "neg stride logical row0 px0 R");
+		CHECK_EQ(dst[9], 0x20, "neg stride logical row0 px0 G");
+		CHECK_EQ(dst[10], 0x30, "neg stride logical row0 px0 B");
+		CHECK_EQ(dst[12], 0x40, "neg stride logical row0 px1 R");
+		CHECK_EQ(dst[0], 0x70, "neg stride logical row1 px0 R");
+		CHECK_EQ(dst[1], 0x80, "neg stride logical row1 px0 G");
+		CHECK_EQ(dst[2], 0x90, "neg stride logical row1 px0 B");
+		CHECK_EQ(dst[4], 0xA0, "neg stride logical row1 px1 R");
+	}
+
+	// --- copy_3plane_to_storage: INT64_MIN dst_row_stride rejected ---
+	{
+		uint8_t src[3] = {0x11, 0x22, 0x33};
+		uint8_t dst[4]{};
+		auto r = copy_3plane_to_storage(src, dst, 1, 1, 3,
+			std::numeric_limits<int64_t>::min(), 3, 4,
+			NOZZLE_FORMAT_RGBA8_UNORM);
+		CHECK(!r.ok, "INT64_MIN dst_row_stride rejected");
+	}
+
+	// --- copy_3plane_to_storage: src_bpp mismatch rejected ---
+	{
+		uint8_t src[2] = {0x11, 0x22};
+		uint8_t dst[4]{};
+		auto r = copy_3plane_to_storage(src, dst, 1, 1, 2, 4, 2, 4,
+			NOZZLE_FORMAT_RGBA8_UNORM);
+		CHECK(!r.ok, "src_bpp=2 rejected for rgba8 (expected 3)");
+		r = copy_3plane_to_storage(src, dst, 1, 1, 1, 4, 1, 4,
+			NOZZLE_FORMAT_RGBA8_UNORM);
+		CHECK(!r.ok, "src_bpp=1 rejected for rgba8 (expected 3)");
+	}
+
+	// --- copy_3plane_to_storage: width*src_bpp overflow rejected ---
+	{
+		uint8_t buf[4]{};
+		auto r = copy_3plane_to_storage(buf, buf, UINT32_MAX, 1, 12, 16, 12, 16,
+			NOZZLE_FORMAT_RGBA32_FLOAT);
+		CHECK(!r.ok, "width*src_bpp overflow rejected");
 	}
 
 	std::printf("\n%d/%d tests passed\n", tests_run - tests_failed, tests_run);
