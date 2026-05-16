@@ -313,7 +313,7 @@ private:
 					} else if (is_bgra) {
 						swiz_fmt = NOZZLE_FORMAT_BGRA8_UNORM;
 					} else {
-					swiz_fmt = NOZZLE_FORMAT_RGBA8_UNORM;
+						swiz_fmt = NOZZLE_FORMAT_RGBA8_UNORM;
 					}
 
 					int64_t src_row_bytes = src_stride;
