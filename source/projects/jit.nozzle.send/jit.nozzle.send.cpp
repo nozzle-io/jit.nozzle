@@ -45,6 +45,32 @@ static bool jitter_to_nozzle_format(
 	return true;
 }
 
+static bool is_rgb_semantic(NozzleTextureFormat fmt) {
+	return fmt == NOZZLE_FORMAT_RGB8_UNORM
+		|| fmt == NOZZLE_FORMAT_RGB16_UNORM
+		|| fmt == NOZZLE_FORMAT_RGB16_FLOAT
+		|| fmt == NOZZLE_FORMAT_RGB32_FLOAT
+		|| fmt == NOZZLE_FORMAT_RGB32_UINT;
+}
+
+static bool is_valid_rgb_to_rgba_storage(NozzleTextureFormat semantic, NozzleTextureFormat storage) {
+	if (semantic == NOZZLE_FORMAT_RGB8_UNORM) {
+		return storage == NOZZLE_FORMAT_RGBA8_UNORM || storage == NOZZLE_FORMAT_BGRA8_UNORM;
+	}
+	if (semantic == NOZZLE_FORMAT_RGB16_UNORM) return storage == NOZZLE_FORMAT_RGBA16_UNORM;
+	if (semantic == NOZZLE_FORMAT_RGB16_FLOAT) return storage == NOZZLE_FORMAT_RGBA16_FLOAT;
+	if (semantic == NOZZLE_FORMAT_RGB32_FLOAT) return storage == NOZZLE_FORMAT_RGBA32_FLOAT;
+	if (semantic == NOZZLE_FORMAT_RGB32_UINT) return storage == NOZZLE_FORMAT_RGBA32_UINT;
+	return false;
+}
+
+static uint32_t expected_storage_bpp(NozzleTextureFormat storage) {
+	if (storage == NOZZLE_FORMAT_RGBA8_UNORM || storage == NOZZLE_FORMAT_BGRA8_UNORM) return 4;
+	if (storage == NOZZLE_FORMAT_RGBA16_UNORM || storage == NOZZLE_FORMAT_RGBA16_FLOAT) return 8;
+	if (storage == NOZZLE_FORMAT_RGBA32_FLOAT || storage == NOZZLE_FORMAT_RGBA32_UINT) return 16;
+	return 0;
+}
+
 class jit_nozzle_send : public object<jit_nozzle_send> {
 public:
 	MIN_DESCRIPTION{"Publish jit.matrix data via nozzle (inter-process texture sharing)"};
@@ -196,7 +222,17 @@ private:
 				return;
 			}
 
-				auto *src = static_cast<const unsigned char *>(bp);
+			NozzleResolvedTextureFormat resolved{};
+			err = nozzle_frame_get_resolved_format(frame, &resolved);
+			if (err != NOZZLE_OK) {
+				cerr << "jit.nozzle.send: get resolved format failed (error " << err << ")" << endl;
+				nozzle_frame_unlock_writable_pixels(frame);
+				nozzle_frame_release(frame);
+				jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+				return;
+			}
+
+			auto *src = static_cast<const unsigned char *>(bp);
 			auto *dst = static_cast<unsigned char *>(mapped.data);
 			bool is_swizzle_type = (minfo.type == _jit_sym_char || minfo.type == _jit_sym_float32 || minfo.type == _jit_sym_long);
 			bool need_argb_swizzle = (minfo.planecount == 4 && is_swizzle_type);
@@ -236,25 +272,66 @@ private:
 					return;
 				}
 			} else {
-				// 3-plane matrices need alpha padding when nozzle upgrades to 4ch internally.
-				// The mapped frame will be 4ch (rgba8/rgba32f/rgba32ui), but source is only 3ch.
 				bool is_3plane = (minfo.planecount == 3 && is_swizzle_type);
 				if (is_3plane) {
+					if (!is_rgb_semantic(resolved.semantic_format)) {
+						cerr << "jit.nozzle.send: 3-plane semantic format not RGB: "
+						     << resolved.semantic_format << endl;
+						nozzle_frame_unlock_writable_pixels(frame);
+						nozzle_frame_release(frame);
+						jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+						return;
+					}
+					if (!is_valid_rgb_to_rgba_storage(resolved.semantic_format, resolved.storage_format)) {
+						cerr << "jit.nozzle.send: 3-plane contract violated: semantic="
+						     << resolved.semantic_format << " storage=" << resolved.storage_format << endl;
+						nozzle_frame_unlock_writable_pixels(frame);
+						nozzle_frame_release(frame);
+						jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+						return;
+					}
+					uint32_t exp_bpp = expected_storage_bpp(resolved.storage_format);
+					if (resolved.bytes_per_pixel != exp_bpp) {
+						cerr << "jit.nozzle.send: 3-plane bpp mismatch: resolved.bpp="
+						     << static_cast<int>(resolved.bytes_per_pixel) << " expected=" << exp_bpp << endl;
+						nozzle_frame_unlock_writable_pixels(frame);
+						nozzle_frame_release(frame);
+						jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+						return;
+					}
+					if (mapped.format != resolved.storage_format) {
+						cerr << "jit.nozzle.send: 3-plane mapped.format mismatch: mapped="
+						     << mapped.format << " storage=" << resolved.storage_format << endl;
+						nozzle_frame_unlock_writable_pixels(frame);
+						nozzle_frame_release(frame);
+						jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+						return;
+					}
+
 					uint32_t src_bpp = pixel_bytes;
-					uint32_t dst_bpp = (src_bpp / 3) * 4;
-					for(uint32_t y = 0; y < h; y++) {
+					uint32_t dst_bpp = resolved.bytes_per_pixel;
+					bool is_bgra_8bit = (resolved.storage_format == NOZZLE_FORMAT_BGRA8_UNORM);
+
+					for (uint32_t y = 0; y < h; y++) {
 						const unsigned char *src_row = src + y * matrix_row_bytes;
 						unsigned char *dst_row = dst + static_cast<int64_t>(y) * mapped.row_stride_bytes;
-						for(uint32_t x = 0; x < w; x++) {
-							std::memcpy(dst_row + x * dst_bpp, src_row + x * src_bpp, src_bpp);
-							if (src_bpp == 3) {
-								dst_row[x * dst_bpp + 3] = 0xFF;
-							} else if (dst_bpp == 16) {
-								*reinterpret_cast<float *>(dst_row + x * dst_bpp + 12) = 1.0f;
+						for (uint32_t x = 0; x < w; x++) {
+							unsigned char *dst_px = dst_row + x * dst_bpp;
+							const unsigned char *src_px = src_row + x * src_bpp;
+							if (is_bgra_8bit) {
+								dst_px[0] = src_px[2];
+								dst_px[1] = src_px[1];
+								dst_px[2] = src_px[0];
 							} else {
-								*reinterpret_cast<uint32_t *>(dst_row + x * dst_bpp + 12) = 1u;
+								std::memcpy(dst_px, src_px, src_bpp);
 							}
 						}
+					}
+
+					err = nozzle_fill_opaque_alpha_channel(
+						mapped.data, w, h, mapped.row_stride_bytes, mapped.format);
+					if (err != NOZZLE_OK) {
+						cerr << "jit.nozzle.send: alpha fill failed (error " << err << ")" << endl;
 					}
 				} else {
 					for(uint32_t y = 0; y < h; y++) {
