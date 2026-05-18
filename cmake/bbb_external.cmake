@@ -108,6 +108,15 @@ macro(bbb_add_external)
         )
     endif()
 
+    # --- macOS bundle identity ---
+    # max-posttarget consumes AUTHOR_DOMAIN and BUNDLE_IDENTIFIER when
+    # generating Info.plist.  Without these, built .mxo bundles get the
+    # invalid identifier ".".
+    if(APPLE)
+        set(AUTHOR_DOMAIN "org.nozzle-io")
+        set(BUNDLE_IDENTIFIER "${PROJECT_NAME}")
+    endif()
+
     # --- min-api post-target ---
     include(${C74_MIN_API_DIR}/script/min-posttarget.cmake)
 
