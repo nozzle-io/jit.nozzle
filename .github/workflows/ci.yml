@@ -83,38 +83,95 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare package metadata
+        id: meta
+        run: |
+          repo="${{ github.event.repository.name }}"
+          short_sha="${GITHUB_SHA::7}"
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            base="${repo}-${GITHUB_REF_NAME}"
+            channel="versioned"
+          elif [[ "${GITHUB_REF}" == refs/heads/main ]]; then
+            base="${repo}-latest-${short_sha}"
+            channel="latest"
+          elif [[ "${GITHUB_REF}" == refs/heads/stable ]]; then
+            base="${repo}-stable-${short_sha}"
+            channel="stable"
+          else
+            base="${repo}-ci-${short_sha}"
+            channel="ci"
+          fi
+          echo "package_root=${base}" >> "$GITHUB_OUTPUT"
+          echo "package_name=${base}.zip" >> "$GITHUB_OUTPUT"
+          echo "channel=${channel}" >> "$GITHUB_OUTPUT"
+
       - name: Download macOS externals
         uses: actions/download-artifact@v4
         with:
           name: ${{ github.event.repository.name }}-macos
-          path: dist/${{ github.event.repository.name }}/externals/
+          path: dist/${{ steps.meta.outputs.package_root }}/externals/
 
       - name: Download Windows externals
         uses: actions/download-artifact@v4
         with:
           name: ${{ github.event.repository.name }}-windows
-          path: dist/${{ github.event.repository.name }}/externals/
+          path: dist/${{ steps.meta.outputs.package_root }}/externals/
 
       - name: Assemble package
         run: |
-          NAME="${{ github.event.repository.name }}"
-          cp package-info.json "dist/$NAME/" 2>/dev/null || true
-          cp LICENSE "dist/$NAME/" 2>/dev/null || true
-          cp README.md "dist/$NAME/" 2>/dev/null || true
-          cp -r help "dist/$NAME/" 2>/dev/null || true
-          cp -r extra "dist/$NAME/" 2>/dev/null || true
-          cp -r patchers "dist/$NAME/" 2>/dev/null || true
+          root="dist/${{ steps.meta.outputs.package_root }}"
+          install -D package-info.json "$root/package-info.json"
+          install -D LICENSE "$root/LICENSE"
+          install -D README.md "$root/README.md"
+          for optional_dir in help extra patchers; do
+            if [ -d "$optional_dir" ]; then
+              cp -R "$optional_dir" "$root/"
+            fi
+          done
+
+      - name: Verify package contents
+        run: |
+          root="dist/${{ steps.meta.outputs.package_root }}"
+          test -f "$root/package-info.json"
+          test -f "$root/LICENSE"
+          test -f "$root/README.md"
+          for ext in jit.nozzle.send jit.nozzle.receive jit.gl.nozzle.send jit.gl.nozzle.receive; do
+            test -f "$root/externals/${ext}.mxo/Contents/MacOS/${ext}"
+            test -f "$root/externals/${ext}.mxe64"
+          done
 
       - name: Create archive
         run: |
           cd dist
-          zip -r "${{ github.event.repository.name }}.zip" "${{ github.event.repository.name }}/"
+          zip -r "${{ steps.meta.outputs.package_name }}" "${{ steps.meta.outputs.package_root }}/"
+
+      - name: Verify archive
+        run: |
+          archive="dist/${{ steps.meta.outputs.package_name }}"
+          unzip -l "$archive" | grep -F '${{ steps.meta.outputs.package_root }}/package-info.json'
+          unzip -l "$archive" | grep -F '${{ steps.meta.outputs.package_root }}/externals/jit.nozzle.send.mxo/Contents/MacOS/jit.nozzle.send'
+          unzip -l "$archive" | grep -F '${{ steps.meta.outputs.package_root }}/externals/jit.nozzle.send.mxe64'
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.event.repository.name }}-latest
-          path: dist/*.zip
+          name: ${{ steps.meta.outputs.package_root }}
+          path: dist/${{ steps.meta.outputs.package_name }}
+
+      - name: Check versioned release asset does not exist
+        if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          asset="${{ steps.meta.outputs.package_name }}"
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name' > existing-assets.txt 2>/dev/null; then
+            if grep -Fx "$asset" existing-assets.txt; then
+              echo "versioned release asset already exists: $asset" >&2
+              exit 1
+            fi
+          else
+            echo "No existing release for ${GITHUB_REF_NAME}; upload may create it."
+          fi
 
       - name: Upload latest development snapshot
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -126,10 +183,10 @@ jobs:
           body: |
             Development snapshot from main.
             Commit: ${{ github.sha }}
-          files: dist/*.zip
+          files: dist/${{ steps.meta.outputs.package_name }}
 
       - name: Upload versioned release
         if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.zip
+          files: dist/${{ steps.meta.outputs.package_name }}
