@@ -91,12 +91,16 @@ Jitter matrix type and planecount are mapped to nozzle format as follows:
 | char | 3,4 | RGBA8 UNORM (3-plane padded to 4) |
 | float32 | 1 | R32 Float |
 | float32 | 2 | RG32 Float |
-| float32 | 3,4 | RGBA32 Float (3-plane padded to 4) |
+| float32 | 3 | RGB32 Float requested semantic format; storage may fall back to RGBA32 Float with alpha fill |
+| float32 | 4 | RGBA32 Float |
 | long | 1 | R32 Uint |
 | long | 2 | RGBA32 Uint (2-plane expanded to 4) |
-| long | 3,4 | RGBA32 Uint (3-plane padded to 4) |
+| long | 3 | RGB32 Uint requested semantic format; storage may fall back to RGBA32 Uint with alpha fill |
+| long | 4 | RGBA32 Uint |
 
-Note: long type uses nozzle uint formats (nozzle has no RG32 Uint, so 2-plane is expanded to RGBA32 Uint). 16-bit unorm/float types have no Jitter matrix type mapping and cannot be sent.
+`jit.nozzle.send` matrix input publishes Jitter `float32` matrices as full-precision 32-bit float nozzle formats. It does not emit R16/RG16/RGBA16_FLOAT from `jit.matrix float32` sources, and there is currently no `@half`, `@float16`, or `@output_format` attribute for matrix send down-conversion. Receive-side 16F widening is a separate policy and does not imply send-side half output. Any future matrix half-output mode must perform explicit numeric float32-to-float16 conversion, define precision-loss/rounding behavior, and must not raw-copy float32 memory into 16F storage.
+
+Note: long type uses nozzle uint formats (nozzle has no RG32 Uint, so 2-plane is expanded to RGBA32 Uint). 16-bit unorm/float matrix output is not supported by `jit.nozzle.send`; this limitation does not apply to `jit.gl.nozzle.send`, which can publish native 16F GL textures.
 
 ### jit.nozzle.receive (Receiver)
 

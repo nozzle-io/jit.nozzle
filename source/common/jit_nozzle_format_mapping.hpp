@@ -57,6 +57,10 @@ inline bool jitter_to_nozzle_format(
 			case 4: out = {NOZZLE_FORMAT_RGBA8_UNORM, 4}; return true;
 		}
 	} else if(type == jitter_type::float32_type) {
+		// Send-side jit.matrix float32 policy is full-precision only.
+		// R16/RG16/RGBA16_FLOAT are receive-side half-to-float widen
+		// inputs, not send targets. Do not map float32 sources to 16F
+		// without an explicit numeric float32-to-half conversion policy.
 		switch(planecount) {
 			case 1: out = {NOZZLE_FORMAT_R32_FLOAT, 4}; return true;
 			case 2: out = {NOZZLE_FORMAT_RG32_FLOAT, 8}; return true;

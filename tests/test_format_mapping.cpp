@@ -55,27 +55,44 @@ int main() {
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, 1, out), "float32 1-plane should succeed");
-        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_R32_FLOAT, "float32 1-plane → R32_FLOAT");
+        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_R32_FLOAT, "float32 1-plane full precision send policy → R32_FLOAT");
         CHECK_EQ(out.source_bytes_per_pixel, 4u, "float32 1-plane → 4 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, 2, out), "float32 2-plane should succeed");
-        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RG32_FLOAT, "float32 2-plane → RG32_FLOAT");
+        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RG32_FLOAT, "float32 2-plane full precision send policy → RG32_FLOAT");
         CHECK_EQ(out.source_bytes_per_pixel, 8u, "float32 2-plane → 8 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, 3, out), "float32 3-plane should succeed");
-        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGB32_FLOAT, "float32 3-plane → RGB32_FLOAT");
+        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGB32_FLOAT, "float32 3-plane requested semantic send policy → RGB32_FLOAT");
         CHECK_EQ(out.source_bytes_per_pixel, 12u, "float32 3-plane → 12 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, 4, out), "float32 4-plane should succeed");
-        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA32_FLOAT, "float32 4-plane → RGBA32_FLOAT");
+        CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA32_FLOAT, "float32 4-plane full precision send policy → RGBA32_FLOAT");
         CHECK_EQ(out.source_bytes_per_pixel, 16u, "float32 4-plane → 16 source bytes");
     }
+    {
+        const NozzleTextureFormat half_formats[] = {
+            NOZZLE_FORMAT_R16_FLOAT,
+            NOZZLE_FORMAT_RG16_FLOAT,
+            NOZZLE_FORMAT_RGBA16_FLOAT,
+        };
+        for (int planes = 1; planes <= 4; ++planes) {
+            send_format_mapping out{};
+            CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, planes, out),
+                  "float32 send policy should accept 1-4 planes");
+            for (NozzleTextureFormat half_format : half_formats) {
+                CHECK(out.nozzle_fmt != half_format,
+                      "float32 send policy must not request 16F without explicit numeric conversion");
+            }
+        }
+    }
+
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::long_type, 1, out), "long 1-plane should succeed");
@@ -173,21 +190,21 @@ int main() {
 
     {
         auto m = jit_nozzle::nozzle_to_jitter_format(NOZZLE_FORMAT_R16_FLOAT);
-        CHECK_EQ(m.type, jitter_type::float32_type, "R16_FLOAT → float32");
+        CHECK_EQ(m.type, jitter_type::float32_type, "R16_FLOAT receive widen policy → float32");
         CHECK_EQ(m.planecount, 1, "R16_FLOAT → 1 plane");
-        CHECK_EQ(m.bytes_per_pixel, 4u, "R16_FLOAT → 4 bytes");
+        CHECK_EQ(m.bytes_per_pixel, 4u, "R16_FLOAT receive widens to 4 float32 bytes");
     }
     {
         auto m = jit_nozzle::nozzle_to_jitter_format(NOZZLE_FORMAT_RG16_FLOAT);
-        CHECK_EQ(m.type, jitter_type::float32_type, "RG16_FLOAT → float32");
+        CHECK_EQ(m.type, jitter_type::float32_type, "RG16_FLOAT receive widen policy → float32");
         CHECK_EQ(m.planecount, 2, "RG16_FLOAT → 2 planes");
-        CHECK_EQ(m.bytes_per_pixel, 8u, "RG16_FLOAT → 8 bytes");
+        CHECK_EQ(m.bytes_per_pixel, 8u, "RG16_FLOAT receive widens to 8 float32 bytes");
     }
     {
         auto m = jit_nozzle::nozzle_to_jitter_format(NOZZLE_FORMAT_RGBA16_FLOAT);
-        CHECK_EQ(m.type, jitter_type::float32_type, "RGBA16_FLOAT → float32");
+        CHECK_EQ(m.type, jitter_type::float32_type, "RGBA16_FLOAT receive widen policy → float32");
         CHECK_EQ(m.planecount, 4, "RGBA16_FLOAT → 4 planes");
-        CHECK_EQ(m.bytes_per_pixel, 16u, "RGBA16_FLOAT → 16 bytes");
+        CHECK_EQ(m.bytes_per_pixel, 16u, "RGBA16_FLOAT receive widens to 16 float32 bytes");
     }
 
     {
