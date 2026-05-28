@@ -100,7 +100,7 @@ Jitter matrix type and planecount are mapped to nozzle format as follows:
 
 `jit.nozzle.send` matrix input publishes Jitter `float32` matrices as full-precision 32-bit float nozzle formats. It does not emit R16/RG16/RGBA16_FLOAT from `jit.matrix float32` sources, and there is currently no `@half`, `@float16`, or `@output_format` attribute for matrix send down-conversion. Receive-side 16F widening is a separate policy and does not imply send-side half output. Any future matrix half-output mode must perform explicit numeric float32-to-float16 conversion, define precision-loss/rounding behavior, and must not raw-copy float32 memory into 16F storage.
 
-Note: long type uses nozzle uint formats (nozzle has no RG32 Uint, so 2-plane is expanded to RGBA32 Uint). 16-bit unorm/float matrix output is not supported by `jit.nozzle.send`; this limitation does not apply to `jit.gl.nozzle.send`, which can publish native 16F GL textures.
+Note: long type uses nozzle uint formats (nozzle has no RG32 Uint, so 2-plane is expanded to RGBA32 Uint). 16-bit unorm/float publishing from `jit.nozzle.send` matrix input is not supported; this limitation does not apply to `jit.gl.nozzle.send`, which can publish native 16F GL textures.
 
 ### jit.nozzle.receive (Receiver)
 
