@@ -241,7 +241,9 @@ private:
 				}
 
 				NozzleTextureFormat swiz_fmt;
-				if (source_bytes_per_pixel == 16) {
+				if (jfmt.type == jit_nozzle::jitter_type::long_type) {
+					swiz_fmt = NOZZLE_FORMAT_RGBA32_UINT;
+				} else if (jfmt.type == jit_nozzle::jitter_type::float32_type) {
 					swiz_fmt = NOZZLE_FORMAT_RGBA32_FLOAT;
 				} else if (is_bgra) {
 					swiz_fmt = NOZZLE_FORMAT_BGRA8_UNORM;
