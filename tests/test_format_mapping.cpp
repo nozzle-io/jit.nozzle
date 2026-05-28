@@ -32,73 +32,73 @@ int main() {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::char_type, 1, out), "char 1-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_R8_UNORM, "char 1-plane → R8_UNORM");
-        CHECK_EQ(out.bytes_per_pixel, 1u, "char 1-plane → 1 byte");
+        CHECK_EQ(out.source_bytes_per_pixel, 1u, "char 1-plane → 1 source byte");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::char_type, 2, out), "char 2-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RG8_UNORM, "char 2-plane → RG8_UNORM");
-        CHECK_EQ(out.bytes_per_pixel, 2u, "char 2-plane → 2 bytes");
+        CHECK_EQ(out.source_bytes_per_pixel, 2u, "char 2-plane → 2 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::char_type, 3, out), "char 3-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGB8_UNORM, "char 3-plane → RGB8_UNORM");
-        CHECK_EQ(out.bytes_per_pixel, 3u, "char 3-plane → 3 bytes");
+        CHECK_EQ(out.source_bytes_per_pixel, 3u, "char 3-plane → 3 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::char_type, 4, out), "char 4-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA8_UNORM, "char 4-plane → RGBA8_UNORM");
-        CHECK_EQ(out.bytes_per_pixel, 4u, "char 4-plane → 4 bytes");
+        CHECK_EQ(out.source_bytes_per_pixel, 4u, "char 4-plane → 4 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, 1, out), "float32 1-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_R32_FLOAT, "float32 1-plane → R32_FLOAT");
-        CHECK_EQ(out.bytes_per_pixel, 4u, "float32 1-plane → 4 bytes");
+        CHECK_EQ(out.source_bytes_per_pixel, 4u, "float32 1-plane → 4 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, 2, out), "float32 2-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RG32_FLOAT, "float32 2-plane → RG32_FLOAT");
-        CHECK_EQ(out.bytes_per_pixel, 8u, "float32 2-plane → 8 bytes");
+        CHECK_EQ(out.source_bytes_per_pixel, 8u, "float32 2-plane → 8 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, 3, out), "float32 3-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGB32_FLOAT, "float32 3-plane → RGB32_FLOAT");
-        CHECK_EQ(out.bytes_per_pixel, 12u, "float32 3-plane → 12 bytes");
+        CHECK_EQ(out.source_bytes_per_pixel, 12u, "float32 3-plane → 12 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::float32_type, 4, out), "float32 4-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA32_FLOAT, "float32 4-plane → RGBA32_FLOAT");
-        CHECK_EQ(out.bytes_per_pixel, 16u, "float32 4-plane → 16 bytes");
+        CHECK_EQ(out.source_bytes_per_pixel, 16u, "float32 4-plane → 16 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::long_type, 1, out), "long 1-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_R32_UINT, "long 1-plane → R32_UINT");
-        CHECK_EQ(out.bytes_per_pixel, 4u, "long 1-plane → 4 bytes");
+        CHECK_EQ(out.source_bytes_per_pixel, 4u, "long 1-plane → 4 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::long_type, 2, out), "long 2-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA32_UINT, "long 2-plane → RGBA32_UINT");
-        CHECK_EQ(out.bytes_per_pixel, 8u, "long 2-plane → 8 bytes");
+        CHECK_EQ(out.source_bytes_per_pixel, 8u, "long 2-plane → 8 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::long_type, 3, out), "long 3-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGB32_UINT, "long 3-plane → RGB32_UINT");
-        CHECK_EQ(out.bytes_per_pixel, 12u, "long 3-plane → 12 bytes");
+        CHECK_EQ(out.source_bytes_per_pixel, 12u, "long 3-plane → 12 source bytes");
     }
     {
         send_format_mapping out{};
         CHECK(jit_nozzle::jitter_to_nozzle_format(jitter_type::long_type, 4, out), "long 4-plane should succeed");
         CHECK_EQ(out.nozzle_fmt, NOZZLE_FORMAT_RGBA32_UINT, "long 4-plane → RGBA32_UINT");
-        CHECK_EQ(out.bytes_per_pixel, 16u, "long 4-plane → 16 bytes");
+        CHECK_EQ(out.source_bytes_per_pixel, 16u, "long 4-plane → 16 source bytes");
     }
 
     {

@@ -25,7 +25,7 @@ static std::string attr_to_string(const attribute<symbol> &a) {
 struct jitter_matrix_format {
 	jit_nozzle::jitter_type type;
 	NozzleTextureFormat nozzle_fmt;
-	uint32_t bytes_per_pixel;
+	uint32_t source_bytes_per_pixel;
 };
 
 static bool symbol_to_jitter_type(c74::max::t_symbol *sym, jit_nozzle::jitter_type &out) {
@@ -43,7 +43,7 @@ static bool jitter_to_nozzle_format(
 	if(!symbol_to_jitter_type(type, jtype)) return false;
 	jit_nozzle::send_format_mapping result{};
 	if(!jit_nozzle::jitter_to_nozzle_format(jtype, planecount, result)) return false;
-	out = {jtype, result.nozzle_fmt, result.bytes_per_pixel};
+	out = {jtype, result.nozzle_fmt, result.source_bytes_per_pixel};
 	return true;
 }
 
@@ -210,14 +210,14 @@ private:
 
 			auto *src = static_cast<const unsigned char *>(bp);
 			auto *dst = static_cast<unsigned char *>(mapped.data);
-			uint32_t pixel_bytes = jfmt.bytes_per_pixel;
+			uint32_t source_bytes_per_pixel = jfmt.source_bytes_per_pixel;
 			jit_nozzle::matrix_copy_request copy_request{};
 			copy_request.type = jfmt.type;
 			copy_request.planecount = minfo.planecount;
 			copy_request.requested_format = jfmt.nozzle_fmt;
 			copy_request.mapped_format = mapped.format;
 			copy_request.resolved = resolved;
-			copy_request.src_bpp = pixel_bytes;
+			copy_request.src_bpp = source_bytes_per_pixel;
 
 			auto dispatch = jit_nozzle::choose_matrix_copy_path(copy_request);
 			if (dispatch.path == jit_nozzle::matrix_copy_path::invalid) {
@@ -241,7 +241,7 @@ private:
 				}
 
 				NozzleTextureFormat swiz_fmt;
-				if (pixel_bytes == 16) {
+				if (source_bytes_per_pixel == 16) {
 					swiz_fmt = NOZZLE_FORMAT_RGBA32_FLOAT;
 				} else if (is_bgra) {
 					swiz_fmt = NOZZLE_FORMAT_BGRA8_UNORM;
@@ -261,7 +261,7 @@ private:
 					return;
 				}
 			} else if (dispatch.path == jit_nozzle::matrix_copy_path::rgb3_to_storage) {
-				uint32_t src_bpp = pixel_bytes;
+				uint32_t src_bpp = source_bytes_per_pixel;
 				uint32_t dst_bpp = resolved.bytes_per_pixel;
 
 				auto copy_result = jit_nozzle::copy_3plane_to_storage(
@@ -288,7 +288,7 @@ private:
 			} else if (dispatch.path == jit_nozzle::matrix_copy_path::long2_to_rgba32_uint) {
 				auto copy_result = jit_nozzle::copy_2plane_long_to_rgba32_uint(
 					src, dst, w, h, matrix_row_bytes,
-					mapped.row_stride_bytes, pixel_bytes,
+					mapped.row_stride_bytes, source_bytes_per_pixel,
 					resolved.bytes_per_pixel, resolved.storage_format);
 				if (!copy_result.ok) {
 					cerr << "jit.nozzle.send: 2-plane long expansion failed: "
@@ -301,7 +301,7 @@ private:
 			} else {
 				auto copy_result = jit_nozzle::copy_direct_rows(
 					src, dst, w, h, matrix_row_bytes,
-					mapped.row_stride_bytes, pixel_bytes);
+					mapped.row_stride_bytes, source_bytes_per_pixel);
 				if (!copy_result.ok) {
 					cerr << "jit.nozzle.send: direct copy failed: " << copy_result.error << endl;
 					nozzle_frame_unlock_writable_pixels(frame);

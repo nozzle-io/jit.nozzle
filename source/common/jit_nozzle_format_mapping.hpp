@@ -43,7 +43,7 @@ inline format_mapping nozzle_to_jitter_format(NozzleTextureFormat fmt) {
 
 struct send_format_mapping {
 	NozzleTextureFormat nozzle_fmt;
-	uint32_t bytes_per_pixel;
+	uint32_t source_bytes_per_pixel;
 };
 
 inline bool jitter_to_nozzle_format(
@@ -66,7 +66,12 @@ inline bool jitter_to_nozzle_format(
 	} else if(type == jitter_type::long_type) {
 		switch(planecount) {
 			case 1: out = {NOZZLE_FORMAT_R32_UINT, 4}; return true;
-			case 2: out = {NOZZLE_FORMAT_RGBA32_UINT, 8}; return true;
+			case 2:
+				// Nozzle currently has no RG32_UINT public format. Request
+				// RGBA32_UINT storage, but keep 8 as the source jit.matrix
+				// bytes per pixel. The send copy path must synthesize B/A
+				// via copy_2plane_long_to_rgba32_uint().
+				out = {NOZZLE_FORMAT_RGBA32_UINT, 8}; return true;
 			case 3: out = {NOZZLE_FORMAT_RGB32_UINT, 12}; return true;
 			case 4: out = {NOZZLE_FORMAT_RGBA32_UINT, 16}; return true;
 		}

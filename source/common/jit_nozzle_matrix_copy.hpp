@@ -112,6 +112,9 @@ inline rgb_copy_result copy_direct_rows(
 	return {true, nullptr};
 }
 
+// Expand a 2-plane Jitter long source [R, G] into RGBA32_UINT storage
+// [R, G, 0u, 1u]. This is the explicit compatibility policy used
+// while Nozzle has no RG32_UINT public format.
 inline rgb_copy_result copy_2plane_long_to_rgba32_uint(
 	const uint8_t *src,
 	uint8_t *dst,
