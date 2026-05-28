@@ -7,6 +7,7 @@ extern "C" {
 }
 
 #include "jit_nozzle_format_mapping.hpp"
+#include "jit_nozzle_gl_format_mapping.hpp"
 
 using jit_nozzle::jitter_type;
 using jit_nozzle::send_format_mapping;
@@ -251,6 +252,67 @@ int main() {
         CHECK_EQ(m.type, jitter_type::char_type, "unknown → char fallback");
         CHECK_EQ(m.planecount, 4, "unknown → 4 planes fallback");
         CHECK_EQ(m.bytes_per_pixel, 4u, "unknown → 4 bytes fallback");
+    }
+
+
+    std::printf("\n=== GL internal format mapping tests (jit.gl.nozzle.send) ===\n");
+
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_R8), NOZZLE_FORMAT_R8_UNORM, "GL_R8 → R8_UNORM");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RG8), NOZZLE_FORMAT_RG8_UNORM, "GL_RG8 → RG8_UNORM");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RGB8), NOZZLE_FORMAT_RGB8_UNORM, "GL_RGB8 → RGB8_UNORM");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RGBA8), NOZZLE_FORMAT_RGBA8_UNORM, "GL_RGBA8 → RGBA8_UNORM");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_BGRA8_EXT), NOZZLE_FORMAT_BGRA8_UNORM, "GL_BGRA8_EXT → BGRA8_UNORM");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_SRGB8_ALPHA8), NOZZLE_FORMAT_RGBA8_SRGB, "GL_SRGB8_ALPHA8 → RGBA8_SRGB");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_R16F), NOZZLE_FORMAT_R16_FLOAT, "GL_R16F → R16_FLOAT");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RG16F), NOZZLE_FORMAT_RG16_FLOAT, "GL_RG16F → RG16_FLOAT");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RGB16F), NOZZLE_FORMAT_RGB16_FLOAT, "GL_RGB16F → RGB16_FLOAT");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RGBA16F), NOZZLE_FORMAT_RGBA16_FLOAT, "GL_RGBA16F → RGBA16_FLOAT");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_R32F), NOZZLE_FORMAT_R32_FLOAT, "GL_R32F → R32_FLOAT");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RG32F), NOZZLE_FORMAT_RG32_FLOAT, "GL_RG32F → RG32_FLOAT");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RGB32F), NOZZLE_FORMAT_RGB32_FLOAT, "GL_RGB32F → RGB32_FLOAT");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RGBA32F), NOZZLE_FORMAT_RGBA32_FLOAT, "GL_RGBA32F → RGBA32_FLOAT");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_R16), NOZZLE_FORMAT_R16_UNORM, "GL_R16 → R16_UNORM");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RG16), NOZZLE_FORMAT_RG16_UNORM, "GL_RG16 → RG16_UNORM");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RGB16), NOZZLE_FORMAT_RGB16_UNORM, "GL_RGB16 → RGB16_UNORM");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RGBA16), NOZZLE_FORMAT_RGBA16_UNORM, "GL_RGBA16 → RGBA16_UNORM");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_R32UI), NOZZLE_FORMAT_R32_UINT, "GL_R32UI → R32_UINT");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RGB32UI), NOZZLE_FORMAT_RGB32_UINT, "GL_RGB32UI → RGB32_UINT");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_RGBA32UI), NOZZLE_FORMAT_RGBA32_UINT, "GL_RGBA32UI → RGBA32_UINT");
+    CHECK_EQ(jit_nozzle::gl_internal_format_to_nozzle_format(GL_DEPTH_COMPONENT32F), NOZZLE_FORMAT_DEPTH32_FLOAT, "GL_DEPTH_COMPONENT32F → DEPTH32_FLOAT");
+    {
+        NozzleTextureFormat mapped = jit_nozzle::gl_internal_format_to_nozzle_format(0xDEADu);
+        CHECK_EQ(mapped, NOZZLE_FORMAT_UNKNOWN, "unknown GL internal format → UNKNOWN");
+        CHECK(mapped != NOZZLE_FORMAT_RGBA8_UNORM, "unknown GL internal format must not fall back to RGBA8_UNORM");
+    }
+
+    std::printf("\n=== GL frame copy format policy tests (jit.gl.nozzle.receive) ===\n");
+
+    {
+        NozzleTextureFormat copy_format = NOZZLE_FORMAT_UNKNOWN;
+        CHECK(jit_nozzle::nozzle_frame_format_to_gl_copy_format(NOZZLE_FORMAT_RGBA8_UNORM, copy_format), "RGBA8_UNORM GL copy should be supported");
+        CHECK_EQ(copy_format, NOZZLE_FORMAT_RGBA8_UNORM, "RGBA8_UNORM GL copy → same format");
+    }
+    {
+        NozzleTextureFormat copy_format = NOZZLE_FORMAT_UNKNOWN;
+        CHECK(jit_nozzle::nozzle_frame_format_to_gl_copy_format(NOZZLE_FORMAT_BGRA8_SRGB, copy_format), "BGRA8_SRGB GL copy should be supported via unorm target");
+        CHECK_EQ(copy_format, NOZZLE_FORMAT_BGRA8_UNORM, "BGRA8_SRGB GL copy → BGRA8_UNORM target");
+    }
+    {
+        NozzleTextureFormat copy_format = NOZZLE_FORMAT_UNKNOWN;
+        CHECK(jit_nozzle::nozzle_frame_format_to_gl_copy_format(NOZZLE_FORMAT_DEPTH32_FLOAT, copy_format), "DEPTH32_FLOAT GL copy should be supported via R32_FLOAT target");
+        CHECK_EQ(copy_format, NOZZLE_FORMAT_R32_FLOAT, "DEPTH32_FLOAT GL copy → R32_FLOAT copy target");
+    }
+    {
+        NozzleTextureFormat copy_format = NOZZLE_FORMAT_RGBA8_UNORM;
+        CHECK(!jit_nozzle::nozzle_frame_format_to_gl_copy_format(NOZZLE_FORMAT_RGB8_UNORM, copy_format), "RGB8_UNORM GL receive copy is unsupported until explicitly implemented");
+        CHECK_EQ(copy_format, NOZZLE_FORMAT_UNKNOWN, "unsupported GL receive copy resets output to UNKNOWN");
+        CHECK(copy_format != NOZZLE_FORMAT_RGBA8_UNORM, "unsupported GL receive copy must not fall back to RGBA8_UNORM");
+    }
+    {
+        NozzleTextureFormat copy_format = NOZZLE_FORMAT_RGBA8_UNORM;
+        CHECK(!jit_nozzle::nozzle_frame_format_to_gl_copy_format(static_cast<NozzleTextureFormat>(999), copy_format), "unknown nozzle frame format GL copy should fail");
+        CHECK_EQ(copy_format, NOZZLE_FORMAT_UNKNOWN, "unknown nozzle frame format GL copy resets output to UNKNOWN");
+        CHECK(copy_format != NOZZLE_FORMAT_RGBA8_UNORM, "unknown nozzle frame format must not fall back to RGBA8_UNORM");
     }
 
     std::printf("\n=== Results: %d/%d passed ===\n", tests_run - tests_failed, tests_run);

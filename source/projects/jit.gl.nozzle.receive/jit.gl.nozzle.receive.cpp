@@ -10,6 +10,8 @@ extern "C" {
 #include <GL/gl.h>
 #endif
 
+#include "jit_nozzle_gl_format_mapping.hpp"
+
 #include <mutex>
 #include <string>
 
@@ -24,34 +26,6 @@ static std::string attr_to_string(const attribute<symbol> &a) {
 	return to_string(s);
 }
 
-static NozzleTextureFormat nozzle_format_for_gl_copy(NozzleTextureFormat frame_format) {
-	switch (frame_format) {
-		case NOZZLE_FORMAT_R8_UNORM:
-		case NOZZLE_FORMAT_RG8_UNORM:
-		case NOZZLE_FORMAT_RGBA8_UNORM:
-		case NOZZLE_FORMAT_BGRA8_UNORM:
-		case NOZZLE_FORMAT_R16_UNORM:
-		case NOZZLE_FORMAT_RG16_UNORM:
-		case NOZZLE_FORMAT_RGBA16_UNORM:
-		case NOZZLE_FORMAT_R16_FLOAT:
-		case NOZZLE_FORMAT_RG16_FLOAT:
-		case NOZZLE_FORMAT_RGBA16_FLOAT:
-		case NOZZLE_FORMAT_R32_FLOAT:
-		case NOZZLE_FORMAT_RG32_FLOAT:
-		case NOZZLE_FORMAT_RGBA32_FLOAT:
-		case NOZZLE_FORMAT_R32_UINT:
-		case NOZZLE_FORMAT_RGBA32_UINT:
-			return frame_format;
-		case NOZZLE_FORMAT_RGBA8_SRGB:
-			return NOZZLE_FORMAT_RGBA8_UNORM;
-		case NOZZLE_FORMAT_BGRA8_SRGB:
-			return NOZZLE_FORMAT_BGRA8_UNORM;
-		case NOZZLE_FORMAT_DEPTH32_FLOAT:
-			return NOZZLE_FORMAT_R32_FLOAT;
-		default:
-			return NOZZLE_FORMAT_RGBA8_UNORM;
-	}
-}
 
 class jit_gl_nozzle_receive : public object<jit_gl_nozzle_receive> {
 public:
@@ -258,7 +232,14 @@ private:
 				return;
 			}
 
-			NozzleTextureFormat copy_format = nozzle_format_for_gl_copy(finfo.format);
+			NozzleTextureFormat copy_format = NOZZLE_FORMAT_UNKNOWN;
+			if(!jit_nozzle::nozzle_frame_format_to_gl_copy_format(finfo.format, copy_format)) {
+				cerr << "jit.gl.nozzle.receive: unsupported nozzle frame format "
+				     << static_cast<int>(finfo.format)
+				     << " for GL texture copy; refusing to guess RGBA8_UNORM" << endl;
+				nozzle_frame_release(frame);
+				return;
+			}
 
 			err = nozzle_frame_copy_to_gl_texture(
 				frame,

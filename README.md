@@ -118,19 +118,19 @@ Nozzle format is mapped back to Jitter matrix type as follows:
 
 GL externals automatically detect and preserve the source texture's format.
 
-**Sender**: queries the GL texture's internal format via `glGetTexLevelParameteriv(GL_TEXTURE_INTERNAL_FORMAT)` and maps it to the corresponding nozzle format. Supports R8, RG8, RGBA8, BGRA8, SRGB8_ALPHA8, R16F, RG16F, RGBA16F, R32F, RG32F, RGBA32F, R16, RG16, RGBA16, R32UI, RGBA32UI, and DEPTH_COMPONENT32F. Unknown formats fall back to RGBA8_UNORM.
+**Sender**: queries the GL texture's internal format via `glGetTexLevelParameteriv(GL_TEXTURE_INTERNAL_FORMAT)` and maps only explicitly supported internal formats to nozzle formats. Supported sender internal formats are R8/RG8/RGB8/RGBA8, BGRA8_EXT, SRGB8_ALPHA8, R16/RG16/RGB16/RGBA16, R16F/RG16F/RGB16F/RGBA16F, R32F/RG32F/RGB32F/RGBA32F, R32UI/RGB32UI/RGBA32UI, and DEPTH_COMPONENT32F. Unsupported or unknown internal formats are rejected; the sender does not guess RGBA8_UNORM.
 
-**Receiver**: reads the frame's nozzle format from `NozzleFrameInfo.format` and passes the appropriate format to `nozzle_frame_copy_to_gl_texture`. Unsupported nozzle formats (sRGB, uint, depth, 16-bit unorm) are mapped to the nearest compatible GL format:
+**Receiver**: reads the frame's nozzle format from `NozzleFrameInfo.format` and passes an explicit copy format to `nozzle_frame_copy_to_gl_texture`. Supported receive copy formats are explicitly mapped; unsupported or unknown nozzle formats are rejected rather than coerced to RGBA8_UNORM.
 
 | Frame Format | Copy Format | Notes |
 |---|---|---|
-| All 8-bit unorm | Same format | Direct |
-| All 16-bit float | Same format | Direct |
-| All 32-bit float | Same format | Direct |
-| sRGB variants | Corresponding unorm | sRGB→linear handled by GL |
-| 16-bit unorm | 16-bit float | Precision preserved, semantic change |
-| uint | 32-bit float | Same byte layout, semantic change |
-| depth32_float | R32 float | Single channel |
+| R8/RG8/RGBA8/BGRA8 unorm | Same format | Direct |
+| R16/RG16/RGBA16 float | Same format | Direct |
+| R32/RG32/RGBA32 float | Same format | Direct |
+| R16/RG16/RGBA16 unorm | Same format | Direct |
+| R32/RGBA32 uint | Same format | Direct |
+| RGBA8_SRGB/BGRA8_SRGB | Corresponding unorm | Copy-compatible GL target policy |
+| DEPTH32_FLOAT | R32_FLOAT | Copy-compatible GL target only; not a semantic conversion from depth to color |
 
 ## Build
 

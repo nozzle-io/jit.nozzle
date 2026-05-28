@@ -7,64 +7,12 @@ extern "C" {
 #ifdef __APPLE__
 #include <OpenGL/gl3.h>
 #else
-// Windows <GL/gl.h> only covers OpenGL 1.1; define modern constants directly.
-#ifndef GL_R8
-#define GL_R8 0x8229
-#endif
-#ifndef GL_RG8
-#define GL_RG8 0x822B
-#endif
-#ifndef GL_RGBA8
-#define GL_RGBA8 0x8058
-#endif
-#ifndef GL_BGRA8_EXT
-#define GL_BGRA8_EXT 0x93A1
-#endif
-#ifndef GL_SRGB8_ALPHA8
-#define GL_SRGB8_ALPHA8 0x8C43
-#endif
-#ifndef GL_R16F
-#define GL_R16F 0x822D
-#endif
-#ifndef GL_RG16F
-#define GL_RG16F 0x822F
-#endif
-#ifndef GL_RGBA16F
-#define GL_RGBA16F 0x881A
-#endif
-#ifndef GL_R32F
-#define GL_R32F 0x822E
-#endif
-#ifndef GL_RG32F
-#define GL_RG32F 0x8230
-#endif
-#ifndef GL_RGBA32F
-#define GL_RGBA32F 0x8814
-#endif
-#ifndef GL_R16
-#define GL_R16 0x822A
-#endif
-#ifndef GL_RG16
-#define GL_RG16 0x822C
-#endif
-#ifndef GL_RGBA16
-#define GL_RGBA16 0x805B
-#endif
-#ifndef GL_R32UI
-#define GL_R32UI 0x8236
-#endif
-#ifndef GL_RGBA32UI
-#define GL_RGBA32UI 0x8D70
-#endif
-#ifndef GL_DEPTH_COMPONENT32F
-#define GL_DEPTH_COMPONENT32F 0x8CAC
-#endif
-#ifndef GL_TEXTURE_INTERNAL_FORMAT
-#define GL_TEXTURE_INTERNAL_FORMAT 0x1003
-#endif
 #include <GL/gl.h>
 #endif
 
+#include "jit_nozzle_gl_format_mapping.hpp"
+
+#include <iomanip>
 #include <mutex>
 #include <string>
 
@@ -79,43 +27,31 @@ static std::string attr_to_string(const attribute<symbol> &a) {
 	return to_string(s);
 }
 
-static NozzleTextureFormat gl_internal_format_to_nozzle(GLint gl_fmt) {
-	switch (gl_fmt) {
-		case GL_R8:            return NOZZLE_FORMAT_R8_UNORM;
-		case GL_RG8:           return NOZZLE_FORMAT_RG8_UNORM;
-		case GL_RGBA8:         return NOZZLE_FORMAT_RGBA8_UNORM;
-#ifdef GL_BGRA8_EXT
-		case GL_BGRA8_EXT:     return NOZZLE_FORMAT_BGRA8_UNORM;
-#endif
-#ifdef GL_SRGB8_ALPHA8
-		case GL_SRGB8_ALPHA8:  return NOZZLE_FORMAT_RGBA8_SRGB;
-#endif
-		case GL_R16F:          return NOZZLE_FORMAT_R16_FLOAT;
-		case GL_RG16F:         return NOZZLE_FORMAT_RG16_FLOAT;
-		case GL_RGBA16F:       return NOZZLE_FORMAT_RGBA16_FLOAT;
-		case GL_R32F:          return NOZZLE_FORMAT_R32_FLOAT;
-		case GL_RG32F:         return NOZZLE_FORMAT_RG32_FLOAT;
-		case GL_RGBA32F:       return NOZZLE_FORMAT_RGBA32_FLOAT;
-		case GL_R16:           return NOZZLE_FORMAT_R16_UNORM;
-		case GL_RG16:          return NOZZLE_FORMAT_RG16_UNORM;
-		case GL_RGBA16:        return NOZZLE_FORMAT_RGBA16_UNORM;
-#ifdef GL_R32UI
-		case GL_R32UI:         return NOZZLE_FORMAT_R32_UINT;
-#endif
-#ifdef GL_RGBA32UI
-		case GL_RGBA32UI:      return NOZZLE_FORMAT_RGBA32_UINT;
-#endif
-		case GL_DEPTH_COMPONENT32F: return NOZZLE_FORMAT_DEPTH32_FLOAT;
-		default:               return NOZZLE_FORMAT_UNKNOWN;
-	}
-}
+struct gl_texture_format_query {
+	uint32_t internal_format{0};
+	NozzleTextureFormat nozzle_format{NOZZLE_FORMAT_UNKNOWN};
+};
 
-static NozzleTextureFormat query_gl_texture_format(uint32_t gl_id, uint32_t target) {
+static gl_texture_format_query query_gl_texture_format(uint32_t gl_id, uint32_t target) {
+	GLint previous_binding = 0;
+	if(target == 0x0DE1) { // GL_TEXTURE_2D
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, &previous_binding);
+	}
+
 	glBindTexture(target, gl_id);
 	GLint internal_format = 0;
 	glGetTexLevelParameteriv(target, 0, GL_TEXTURE_INTERNAL_FORMAT, &internal_format);
-	glBindTexture(target, 0);
-	return gl_internal_format_to_nozzle(internal_format);
+
+	if(target == 0x0DE1) {
+		glBindTexture(target, static_cast<GLuint>(previous_binding));
+	} else {
+		glBindTexture(target, 0);
+	}
+
+	return gl_texture_format_query{
+		static_cast<uint32_t>(internal_format),
+		jit_nozzle::gl_internal_format_to_nozzle_format(static_cast<uint32_t>(internal_format))
+	};
 }
 
 class jit_gl_nozzle_send : public object<jit_gl_nozzle_send> {
@@ -202,7 +138,7 @@ private:
 	uint32_t cached_gl_texture_name_{0};
 	uint32_t cached_width_{0};
 	uint32_t cached_height_{0};
-	NozzleTextureFormat cached_format_{NOZZLE_FORMAT_RGBA8_UNORM};
+	NozzleTextureFormat cached_format_{NOZZLE_FORMAT_UNKNOWN};
 
 	void setup_sender(const std::string& name) {
 		if(name.empty()) return;
@@ -257,9 +193,10 @@ private:
 		}
 		if(!sender_) return;
 
-		NozzleTextureFormat fmt = query_gl_texture_format(static_cast<uint32_t>(gl_id), 0x0DE1);
-		if(fmt == NOZZLE_FORMAT_UNKNOWN) {
-			cerr << "jit.gl.nozzle.send: unsupported GL texture format" << endl;
+		gl_texture_format_query format_query = query_gl_texture_format(static_cast<uint32_t>(gl_id), 0x0DE1);
+		if(format_query.nozzle_format == NOZZLE_FORMAT_UNKNOWN) {
+			cerr << "jit.gl.nozzle.send: unsupported GL texture internal format 0x" << std::hex
+			     << format_query.internal_format << std::dec << "; refusing to guess RGBA8_UNORM" << endl;
 			return;
 		}
 
@@ -269,7 +206,7 @@ private:
 			0x0DE1,
 			static_cast<uint32_t>(w),
 			static_cast<uint32_t>(h),
-			fmt
+			format_query.nozzle_format
 		);
 
 		if(nerr != NOZZLE_OK) {
@@ -280,7 +217,7 @@ private:
 		cached_gl_texture_name_ = static_cast<uint32_t>(gl_id);
 		cached_width_ = static_cast<uint32_t>(w);
 		cached_height_ = static_cast<uint32_t>(h);
-		cached_format_ = fmt;
+		cached_format_ = format_query.nozzle_format;
 		frame_count_++;
 
 		frame_out.send({static_cast<int>(w), static_cast<int>(h), static_cast<long long>(frame_count_)});
@@ -303,30 +240,31 @@ private:
 		}
 		if(!sender_) return;
 
-	NozzleTextureFormat fmt = query_gl_texture_format(gl_id, 0x0DE1);
-	if(fmt == NOZZLE_FORMAT_UNKNOWN) {
-		cerr << "jit.gl.nozzle.send: unsupported GL texture format" << endl;
-		return;
-	}
+		gl_texture_format_query format_query = query_gl_texture_format(gl_id, 0x0DE1);
+		if(format_query.nozzle_format == NOZZLE_FORMAT_UNKNOWN) {
+			cerr << "jit.gl.nozzle.send: unsupported GL texture internal format 0x" << std::hex
+			     << format_query.internal_format << std::dec << "; refusing to guess RGBA8_UNORM" << endl;
+			return;
+		}
 
-	NozzleErrorCode nerr = nozzle_sender_publish_gl_texture(
-		sender_,
-		gl_id,
-		0x0DE1,
-		static_cast<uint32_t>(w),
-		static_cast<uint32_t>(h),
-		fmt
-	);
+		NozzleErrorCode nerr = nozzle_sender_publish_gl_texture(
+			sender_,
+			gl_id,
+			0x0DE1,
+			static_cast<uint32_t>(w),
+			static_cast<uint32_t>(h),
+			format_query.nozzle_format
+		);
 
-	if(nerr != NOZZLE_OK) {
-		cerr << "jit.gl.nozzle.send: publish failed (error " << nerr << ")" << endl;
-		return;
-	}
+		if(nerr != NOZZLE_OK) {
+			cerr << "jit.gl.nozzle.send: publish failed (error " << nerr << ")" << endl;
+			return;
+		}
 
-	cached_gl_texture_name_ = gl_id;
-	cached_width_ = static_cast<uint32_t>(w);
-	cached_height_ = static_cast<uint32_t>(h);
-	cached_format_ = fmt;
+		cached_gl_texture_name_ = gl_id;
+		cached_width_ = static_cast<uint32_t>(w);
+		cached_height_ = static_cast<uint32_t>(h);
+		cached_format_ = format_query.nozzle_format;
 		frame_count_++;
 
 		frame_out.send({w, h, static_cast<long long>(frame_count_)});
@@ -335,12 +273,13 @@ private:
 	void republish_cached() {
 		if(!sender_) return;
 
-		NozzleTextureFormat fmt = query_gl_texture_format(cached_gl_texture_name_, 0x0DE1);
-		if(fmt == NOZZLE_FORMAT_UNKNOWN) {
-			cerr << "jit.gl.nozzle.send: unsupported GL texture format on republish" << endl;
+		gl_texture_format_query format_query = query_gl_texture_format(cached_gl_texture_name_, 0x0DE1);
+		if(format_query.nozzle_format == NOZZLE_FORMAT_UNKNOWN) {
+			cerr << "jit.gl.nozzle.send: unsupported GL texture internal format 0x" << std::hex
+			     << format_query.internal_format << std::dec << "; refusing to guess RGBA8_UNORM on republish" << endl;
 			return;
 		}
-		cached_format_ = fmt;
+		cached_format_ = format_query.nozzle_format;
 
 		NozzleErrorCode nerr = nozzle_sender_publish_gl_texture(
 			sender_,
@@ -348,7 +287,7 @@ private:
 			0x0DE1,
 			cached_width_,
 			cached_height_,
-			fmt
+			format_query.nozzle_format
 		);
 
 		if(nerr != NOZZLE_OK) {
