@@ -5,16 +5,13 @@ extern "C" {
 }
 
 #include "jit_nozzle_format_mapping.hpp"
-#include "jit_nozzle_3plane_copy.hpp"
+#include "jit_nozzle_matrix_copy.hpp"
 
 #include <cstring>
 #include <mutex>
 #include <string>
 
 using namespace c74::min;
-using jit_nozzle::is_rgb_semantic;
-using jit_nozzle::is_valid_rgb_to_rgba_storage;
-using jit_nozzle::expected_storage_bpp;
 
 static std::string to_string(const symbol &s) {
 	return std::string((const char *)s);
@@ -26,6 +23,7 @@ static std::string attr_to_string(const attribute<symbol> &a) {
 }
 
 struct jitter_matrix_format {
+	jit_nozzle::jitter_type type;
 	NozzleTextureFormat nozzle_fmt;
 	uint32_t bytes_per_pixel;
 };
@@ -45,7 +43,7 @@ static bool jitter_to_nozzle_format(
 	if(!symbol_to_jitter_type(type, jtype)) return false;
 	jit_nozzle::send_format_mapping result{};
 	if(!jit_nozzle::jitter_to_nozzle_format(jtype, planecount, result)) return false;
-	out = {result.nozzle_fmt, result.bytes_per_pixel};
+	out = {jtype, result.nozzle_fmt, result.bytes_per_pixel};
 	return true;
 }
 
@@ -212,12 +210,25 @@ private:
 
 			auto *src = static_cast<const unsigned char *>(bp);
 			auto *dst = static_cast<unsigned char *>(mapped.data);
-			bool is_swizzle_type = (minfo.type == _jit_sym_char || minfo.type == _jit_sym_float32 || minfo.type == _jit_sym_long);
-			bool need_argb_swizzle = (minfo.planecount == 4 && is_swizzle_type);
 			uint32_t pixel_bytes = jfmt.bytes_per_pixel;
-			uint32_t copy_bytes = std::min(matrix_row_bytes, w * pixel_bytes);
+			jit_nozzle::matrix_copy_request copy_request{};
+			copy_request.type = jfmt.type;
+			copy_request.planecount = minfo.planecount;
+			copy_request.requested_format = jfmt.nozzle_fmt;
+			copy_request.mapped_format = mapped.format;
+			copy_request.resolved = resolved;
+			copy_request.src_bpp = pixel_bytes;
 
-			if (need_argb_swizzle) {
+			auto dispatch = jit_nozzle::choose_matrix_copy_path(copy_request);
+			if (dispatch.path == jit_nozzle::matrix_copy_path::invalid) {
+				cerr << "jit.nozzle.send: copy dispatch failed: " << dispatch.error << endl;
+				nozzle_frame_unlock_writable_pixels(frame);
+				nozzle_frame_release(frame);
+				jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+				return;
+			}
+
+			if (dispatch.path == jit_nozzle::matrix_copy_path::argb_swizzle) {
 				bool is_bgra = (mapped.format == NOZZLE_FORMAT_BGRA8_UNORM ||
 				                mapped.format == NOZZLE_FORMAT_BGRA8_SRGB);
 				uint8_t permute_map[4];
@@ -249,73 +260,54 @@ private:
 					jit_object_method(matrix_obj, _jit_sym_lock, savelock);
 					return;
 				}
+			} else if (dispatch.path == jit_nozzle::matrix_copy_path::rgb3_to_storage) {
+				uint32_t src_bpp = pixel_bytes;
+				uint32_t dst_bpp = resolved.bytes_per_pixel;
+
+				auto copy_result = jit_nozzle::copy_3plane_to_storage(
+					src, dst, w, h, matrix_row_bytes,
+					mapped.row_stride_bytes, src_bpp, dst_bpp,
+					resolved.storage_format);
+				if (!copy_result.ok) {
+					cerr << "jit.nozzle.send: 3-plane copy failed: " << copy_result.error << endl;
+					nozzle_frame_unlock_writable_pixels(frame);
+					nozzle_frame_release(frame);
+					jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+					return;
+				}
+
+				err = nozzle_fill_opaque_alpha_channel(
+					mapped.data, w, h, mapped.row_stride_bytes, mapped.format);
+				if (err != NOZZLE_OK) {
+					cerr << "jit.nozzle.send: alpha fill failed (error " << err << ")" << endl;
+					nozzle_frame_unlock_writable_pixels(frame);
+					nozzle_frame_release(frame);
+					jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+					return;
+				}
+			} else if (dispatch.path == jit_nozzle::matrix_copy_path::long2_to_rgba32_uint) {
+				auto copy_result = jit_nozzle::copy_2plane_long_to_rgba32_uint(
+					src, dst, w, h, matrix_row_bytes,
+					mapped.row_stride_bytes, pixel_bytes,
+					resolved.bytes_per_pixel, resolved.storage_format);
+				if (!copy_result.ok) {
+					cerr << "jit.nozzle.send: 2-plane long expansion failed: "
+					     << copy_result.error << endl;
+					nozzle_frame_unlock_writable_pixels(frame);
+					nozzle_frame_release(frame);
+					jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+					return;
+				}
 			} else {
-				bool is_3plane = (minfo.planecount == 3 && is_swizzle_type);
-				if (is_3plane) {
-					if (!is_rgb_semantic(resolved.semantic_format)) {
-						cerr << "jit.nozzle.send: 3-plane semantic format not RGB: "
-						     << resolved.semantic_format << endl;
-						nozzle_frame_unlock_writable_pixels(frame);
-						nozzle_frame_release(frame);
-						jit_object_method(matrix_obj, _jit_sym_lock, savelock);
-						return;
-					}
-					if (!is_valid_rgb_to_rgba_storage(resolved.semantic_format, resolved.storage_format)) {
-						cerr << "jit.nozzle.send: 3-plane contract violated: semantic="
-						     << resolved.semantic_format << " storage=" << resolved.storage_format << endl;
-						nozzle_frame_unlock_writable_pixels(frame);
-						nozzle_frame_release(frame);
-						jit_object_method(matrix_obj, _jit_sym_lock, savelock);
-						return;
-					}
-					uint32_t exp_bpp = expected_storage_bpp(resolved.storage_format);
-					if (resolved.bytes_per_pixel != exp_bpp) {
-						cerr << "jit.nozzle.send: 3-plane bpp mismatch: resolved.bpp="
-						     << static_cast<int>(resolved.bytes_per_pixel) << " expected=" << exp_bpp << endl;
-						nozzle_frame_unlock_writable_pixels(frame);
-						nozzle_frame_release(frame);
-						jit_object_method(matrix_obj, _jit_sym_lock, savelock);
-						return;
-					}
-					if (mapped.format != resolved.storage_format) {
-						cerr << "jit.nozzle.send: 3-plane mapped.format mismatch: mapped="
-						     << mapped.format << " storage=" << resolved.storage_format << endl;
-						nozzle_frame_unlock_writable_pixels(frame);
-						nozzle_frame_release(frame);
-						jit_object_method(matrix_obj, _jit_sym_lock, savelock);
-						return;
-					}
-
-					uint32_t src_bpp = pixel_bytes;
-					uint32_t dst_bpp = resolved.bytes_per_pixel;
-
-					auto copy_result = jit_nozzle::copy_3plane_to_storage(
-						src, dst, w, h, matrix_row_bytes,
-						mapped.row_stride_bytes, src_bpp, dst_bpp,
-						resolved.storage_format);
-					if (!copy_result.ok) {
-						cerr << "jit.nozzle.send: 3-plane copy failed: " << copy_result.error << endl;
-						nozzle_frame_unlock_writable_pixels(frame);
-						nozzle_frame_release(frame);
-						jit_object_method(matrix_obj, _jit_sym_lock, savelock);
-						return;
-					}
-
-					err = nozzle_fill_opaque_alpha_channel(
-						mapped.data, w, h, mapped.row_stride_bytes, mapped.format);
-					if (err != NOZZLE_OK) {
-						cerr << "jit.nozzle.send: alpha fill failed (error " << err << ")" << endl;
-						nozzle_frame_unlock_writable_pixels(frame);
-						nozzle_frame_release(frame);
-						jit_object_method(matrix_obj, _jit_sym_lock, savelock);
-						return;
-					}
-				} else {
-					for(uint32_t y = 0; y < h; y++) {
-						const unsigned char *src_row = src + y * matrix_row_bytes;
-						unsigned char *dst_row = dst + static_cast<int64_t>(y) * mapped.row_stride_bytes;
-						std::memcpy(dst_row, src_row, copy_bytes);
-					}
+				auto copy_result = jit_nozzle::copy_direct_rows(
+					src, dst, w, h, matrix_row_bytes,
+					mapped.row_stride_bytes, pixel_bytes);
+				if (!copy_result.ok) {
+					cerr << "jit.nozzle.send: direct copy failed: " << copy_result.error << endl;
+					nozzle_frame_unlock_writable_pixels(frame);
+					nozzle_frame_release(frame);
+					jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+					return;
 				}
 			}
 

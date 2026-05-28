@@ -73,4 +73,10 @@ if(JIT_NOZZLE_BUILD_TESTS)
         ${CMAKE_CURRENT_SOURCE_DIR}/source/common
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/nozzle/include)
     add_test(NAME test_3plane_copy COMMAND test_3plane_copy)
+
+    add_executable(test_matrix_copy_dispatch tests/test_matrix_copy_dispatch.cpp)
+    target_include_directories(test_matrix_copy_dispatch PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/source/common
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/nozzle/include)
+    add_test(NAME test_matrix_copy_dispatch COMMAND test_matrix_copy_dispatch)
 endif()
