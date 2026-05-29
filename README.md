@@ -124,11 +124,11 @@ GL externals automatically detect and preserve the source texture's format.
 
 | Frame Format | Copy Format | Notes |
 |---|---|---|
-| R8/RG8/RGBA8/BGRA8 unorm | Same format | Direct |
-| R16/RG16/RGBA16 float | Same format | Direct |
-| R32/RG32/RGBA32 float | Same format | Direct |
-| R16/RG16/RGBA16 unorm | Same format | Direct |
-| R32/RGBA32 uint | Same format | Direct |
+| R8/RG8/RGB8/RGBA8/BGRA8 unorm | Same format | Direct |
+| R16/RG16/RGB16/RGBA16 float | Same format | Direct |
+| R32/RG32/RGB32/RGBA32 float | Same format | Direct |
+| R16/RG16/RGB16/RGBA16 unorm | Same format | Direct |
+| R32/RGB32/RGBA32 uint | Same format | Direct |
 | RGBA8_SRGB/BGRA8_SRGB | Corresponding unorm | Copy-compatible GL target policy |
 | DEPTH32_FLOAT | R32_FLOAT | Copy-compatible GL target only; not a semantic conversion from depth to color |
 

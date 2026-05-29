@@ -293,6 +293,20 @@ int main() {
         CHECK_EQ(copy_format, NOZZLE_FORMAT_RGBA8_UNORM, "RGBA8_UNORM GL copy → same format");
     }
     {
+        const NozzleTextureFormat rgb_formats[] = {
+            NOZZLE_FORMAT_RGB8_UNORM,
+            NOZZLE_FORMAT_RGB16_UNORM,
+            NOZZLE_FORMAT_RGB16_FLOAT,
+            NOZZLE_FORMAT_RGB32_FLOAT,
+            NOZZLE_FORMAT_RGB32_UINT,
+        };
+        for(NozzleTextureFormat frame_format : rgb_formats) {
+            NozzleTextureFormat copy_format = NOZZLE_FORMAT_UNKNOWN;
+            CHECK(jit_nozzle::nozzle_frame_format_to_gl_copy_format(frame_format, copy_format), "RGB GL receive copy should be supported");
+            CHECK_EQ(copy_format, frame_format, "RGB GL receive copy → same format");
+        }
+    }
+    {
         NozzleTextureFormat copy_format = NOZZLE_FORMAT_UNKNOWN;
         CHECK(jit_nozzle::nozzle_frame_format_to_gl_copy_format(NOZZLE_FORMAT_BGRA8_SRGB, copy_format), "BGRA8_SRGB GL copy should be supported via unorm target");
         CHECK_EQ(copy_format, NOZZLE_FORMAT_BGRA8_UNORM, "BGRA8_SRGB GL copy → BGRA8_UNORM target");
@@ -301,12 +315,6 @@ int main() {
         NozzleTextureFormat copy_format = NOZZLE_FORMAT_UNKNOWN;
         CHECK(jit_nozzle::nozzle_frame_format_to_gl_copy_format(NOZZLE_FORMAT_DEPTH32_FLOAT, copy_format), "DEPTH32_FLOAT GL copy should be supported via R32_FLOAT target");
         CHECK_EQ(copy_format, NOZZLE_FORMAT_R32_FLOAT, "DEPTH32_FLOAT GL copy → R32_FLOAT copy target");
-    }
-    {
-        NozzleTextureFormat copy_format = NOZZLE_FORMAT_RGBA8_UNORM;
-        CHECK(!jit_nozzle::nozzle_frame_format_to_gl_copy_format(NOZZLE_FORMAT_RGB8_UNORM, copy_format), "RGB8_UNORM GL receive copy is unsupported until explicitly implemented");
-        CHECK_EQ(copy_format, NOZZLE_FORMAT_UNKNOWN, "unsupported GL receive copy resets output to UNKNOWN");
-        CHECK(copy_format != NOZZLE_FORMAT_RGBA8_UNORM, "unsupported GL receive copy must not fall back to RGBA8_UNORM");
     }
     {
         NozzleTextureFormat copy_format = NOZZLE_FORMAT_RGBA8_UNORM;
