@@ -8,6 +8,7 @@ extern "C" {
 #include "jit_nozzle_matrix_copy.hpp"
 
 #include <cstring>
+#include <iostream>
 #include <mutex>
 #include <string>
 
@@ -44,6 +45,15 @@ static bool jitter_to_nozzle_format(
 	jit_nozzle::send_format_mapping result{};
 	if(!jit_nozzle::jitter_to_nozzle_format(jtype, planecount, result)) return false;
 	out = {jtype, result.nozzle_fmt, result.source_bytes_per_pixel};
+	return true;
+}
+
+static bool unlock_writable_frame_checked(NozzleFrame *frame) {
+	NozzleErrorCode err = nozzle_frame_unlock_writable_pixels_checked(frame);
+	if(err != NOZZLE_OK) {
+		std::cerr << "jit.nozzle.send: unlock writable pixels failed (error " << err << ")" << std::endl;
+		return false;
+	}
 	return true;
 }
 
@@ -202,7 +212,7 @@ private:
 			err = nozzle_frame_get_resolved_format(frame, &resolved);
 			if (err != NOZZLE_OK) {
 				cerr << "jit.nozzle.send: get resolved format failed (error " << err << ")" << endl;
-				nozzle_frame_unlock_writable_pixels(frame);
+				unlock_writable_frame_checked(frame);
 				nozzle_frame_release(frame);
 				jit_object_method(matrix_obj, _jit_sym_lock, savelock);
 				return;
@@ -222,7 +232,7 @@ private:
 			auto dispatch = jit_nozzle::choose_matrix_copy_path(copy_request);
 			if (dispatch.path == jit_nozzle::matrix_copy_path::invalid) {
 				cerr << "jit.nozzle.send: copy dispatch failed: " << dispatch.error << endl;
-				nozzle_frame_unlock_writable_pixels(frame);
+				unlock_writable_frame_checked(frame);
 				nozzle_frame_release(frame);
 				jit_object_method(matrix_obj, _jit_sym_lock, savelock);
 				return;
@@ -257,7 +267,7 @@ private:
 					swiz_fmt, permute_map);
 				if (swiz_err != NOZZLE_OK) {
 					cerr << "jit.nozzle.send: swizzle failed (error " << swiz_err << ")" << endl;
-					nozzle_frame_unlock_writable_pixels(frame);
+					unlock_writable_frame_checked(frame);
 					nozzle_frame_release(frame);
 					jit_object_method(matrix_obj, _jit_sym_lock, savelock);
 					return;
@@ -272,7 +282,7 @@ private:
 					resolved.storage_format);
 				if (!copy_result.ok) {
 					cerr << "jit.nozzle.send: 3-plane copy failed: " << copy_result.error << endl;
-					nozzle_frame_unlock_writable_pixels(frame);
+					unlock_writable_frame_checked(frame);
 					nozzle_frame_release(frame);
 					jit_object_method(matrix_obj, _jit_sym_lock, savelock);
 					return;
@@ -282,7 +292,7 @@ private:
 					mapped.data, w, h, mapped.row_stride_bytes, mapped.format);
 				if (err != NOZZLE_OK) {
 					cerr << "jit.nozzle.send: alpha fill failed (error " << err << ")" << endl;
-					nozzle_frame_unlock_writable_pixels(frame);
+					unlock_writable_frame_checked(frame);
 					nozzle_frame_release(frame);
 					jit_object_method(matrix_obj, _jit_sym_lock, savelock);
 					return;
@@ -295,7 +305,7 @@ private:
 				if (!copy_result.ok) {
 					cerr << "jit.nozzle.send: 2-plane long expansion failed: "
 					     << copy_result.error << endl;
-					nozzle_frame_unlock_writable_pixels(frame);
+					unlock_writable_frame_checked(frame);
 					nozzle_frame_release(frame);
 					jit_object_method(matrix_obj, _jit_sym_lock, savelock);
 					return;
@@ -306,14 +316,18 @@ private:
 					mapped.row_stride_bytes, source_bytes_per_pixel);
 				if (!copy_result.ok) {
 					cerr << "jit.nozzle.send: direct copy failed: " << copy_result.error << endl;
-					nozzle_frame_unlock_writable_pixels(frame);
+					unlock_writable_frame_checked(frame);
 					nozzle_frame_release(frame);
 					jit_object_method(matrix_obj, _jit_sym_lock, savelock);
 					return;
 				}
 			}
 
-			nozzle_frame_unlock_writable_pixels(frame);
+			if(!unlock_writable_frame_checked(frame)) {
+				nozzle_frame_release(frame);
+				jit_object_method(matrix_obj, _jit_sym_lock, savelock);
+				return;
+			}
 
 			// commit frame
 			err = nozzle_sender_commit_frame(sender_, frame);
@@ -322,6 +336,7 @@ private:
 			} else {
 				frame_count_++;
 			}
+			nozzle_frame_release(frame);
 		}
 
 		// unlock matrix
