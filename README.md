@@ -132,6 +132,18 @@ GL externals automatically detect and preserve the source texture's format.
 | RGBA8_SRGB/BGRA8_SRGB | Corresponding unorm | Copy-compatible GL target policy |
 | DEPTH32_FLOAT | R32_FLOAT | Copy-compatible GL target only; not a semantic conversion from depth to color |
 
+## Metadata Diagnostics
+
+Receiver `info` messages copy metadata and the last-observed connection flag in
+one owned native snapshot. They distinguish a connected sender from retained
+last-known metadata after an observed disconnect. This is not a fresh liveness
+probe or automatic reconnection. Snapshot ownership does not synchronize handle
+creation/destruction or expand the externals' thread-safety guarantees.
+
+CI compiles both receiver externals with debug logging disabled and enabled;
+only the normal binaries are packaged. Existing conversion tests and these
+builds do not constitute live Max-host message/lifecycle validation.
+
 ## Build
 
 ```bash

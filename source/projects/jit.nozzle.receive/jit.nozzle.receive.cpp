@@ -101,12 +101,13 @@ public:
 				cout << "jit.nozzle.receive: not connected" << endl;
 				return {};
 			}
-			NozzleConnectedSenderInfo info{};
-			NozzleErrorCode err = nozzle_receiver_get_connected_info(receiver_, &info);
+			NozzleConnectedSenderSnapshot info{};
+			NozzleErrorCode err = nozzle_receiver_get_connected_info_snapshot(receiver_, &info);
 			if(err == NOZZLE_OK) {
-				cout << "jit.nozzle.receive connected to:" << endl;
-				cout << "  name: " << (info.name ? info.name : "(null)") << endl;
-				cout << "  app:  " << (info.application_name ? info.application_name : "(null)") << endl;
+				cout << (info.connected ? "jit.nozzle.receive connected to:"
+				                       : "jit.nozzle.receive last-known sender (disconnected):") << endl;
+				cout << "  name: " << info.name << endl;
+				cout << "  app:  " << info.application_name << endl;
 				cout << "  size: " << info.width << " x " << info.height << endl;
 				cout << "  frames: " << info.frame_counter << endl;
 			} else {
@@ -189,11 +190,12 @@ private:
 #if JIT_NOZZLE_DEBUG
 			consecutive_errors_++;
 			if(consecutive_errors_ >= 5 && error_log_cooldown_ <= 0) {
-				NozzleConnectedSenderInfo dbg_info{};
-				NozzleErrorCode dbg_err = nozzle_receiver_get_connected_info(receiver_, &dbg_info);
+				NozzleConnectedSenderSnapshot dbg_info{};
+				NozzleErrorCode dbg_err = nozzle_receiver_get_connected_info_snapshot(receiver_, &dbg_info);
 				if(dbg_err == NOZZLE_OK) {
 					cerr << "jit.nozzle.receive: acquire error " << err
 					     << " (x" << consecutive_errors_ << ")"
+					     << " connected=" << (dbg_info.connected != 0)
 					     << " sender_frames=" << dbg_info.frame_counter
 					     << " size=" << dbg_info.width << "x" << dbg_info.height << endl;
 				} else {
