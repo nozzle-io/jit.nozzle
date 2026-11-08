@@ -86,12 +86,13 @@ public:
 				cout << "jit.gl.nozzle.receive: not connected" << endl;
 				return {};
 			}
-			NozzleConnectedSenderInfo info{};
-			NozzleErrorCode err = nozzle_receiver_get_connected_info(receiver_, &info);
+			NozzleConnectedSenderSnapshot info{};
+			NozzleErrorCode err = nozzle_receiver_get_connected_info_snapshot(receiver_, &info);
 			if(err == NOZZLE_OK) {
-				cout << "jit.gl.nozzle.receive connected to:" << endl;
-				cout << "  name: " << (info.name ? info.name : "(null)") << endl;
-				cout << "  app:  " << (info.application_name ? info.application_name : "(null)") << endl;
+				cout << (info.connected ? "jit.gl.nozzle.receive connected to:"
+				                       : "jit.gl.nozzle.receive last-known sender (disconnected):") << endl;
+				cout << "  name: " << info.name << endl;
+				cout << "  app:  " << info.application_name << endl;
 				cout << "  size: " << info.width << " x " << info.height << endl;
 				cout << "  frames: " << info.frame_counter << endl;
 			} else {

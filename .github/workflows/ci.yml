@@ -21,7 +21,7 @@ jobs:
           submodules: recursive
 
       - name: Configure and Build
-        run: cmake -B build -DJIT_NOZZLE_BUILD_TESTS=ON && cmake --build build --config Release
+        run: cmake -B build -DJIT_NOZZLE_BUILD_TESTS=ON -DJIT_NOZZLE_DEBUG=OFF && cmake --build build --config Release
 
       - name: Run Tests
         run: ctest --test-dir build --output-on-failure -C Release
@@ -45,6 +45,13 @@ jobs:
           name: ${{ github.event.repository.name }}-macos
           path: externals/
 
+      # Both configurations write externals/. Upload the normal artifact first
+      # so the package job never consumes debug-logging binaries.
+      - name: Compile receiver debug diagnostics
+        run: |
+          cmake -B build -DJIT_NOZZLE_DEBUG=ON
+          cmake --build build --config Release --target jit.nozzle.receive jit.gl.nozzle.receive --verbose
+
   build-windows:
     runs-on: windows-2022
     steps:
@@ -53,7 +60,7 @@ jobs:
           submodules: recursive
 
       - name: Configure and Build
-        run: cmake -B build -G "Visual Studio 17 2022" -A x64 -DJIT_NOZZLE_BUILD_TESTS=ON && cmake --build build --config Release
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64 -DJIT_NOZZLE_BUILD_TESTS=ON -DJIT_NOZZLE_DEBUG=OFF && cmake --build build --config Release
 
       - name: Run Tests
         run: ctest --test-dir build --output-on-failure -C Release
@@ -75,6 +82,13 @@ jobs:
         with:
           name: ${{ github.event.repository.name }}-windows
           path: externals/
+
+      # Package only the immutable normal artifact uploaded above.
+      - name: Compile receiver debug diagnostics
+        run: |
+          cmake -B build -DJIT_NOZZLE_DEBUG=ON
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build build --config Release --target jit.nozzle.receive jit.gl.nozzle.receive --verbose
 
   package:
     needs: [build-macos, build-windows]
